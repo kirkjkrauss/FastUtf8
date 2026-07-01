@@ -2,7 +2,7 @@
 This <a href="https://developforperformance.com/FastUtf8.html">package</a> provides fast UTF-8 handling for modern C++ with support for legacy C.
 
 It includes a <a href="https://developforperformance.com/UniseriesGuide.html">FastUtf8::Uniseries C++ class</a> that lets you target UTF-8 for internationalization.  UTF-8 is all you need for working with for most Internet-based content, and targeting it can slash bloat associated with unnecessary encodings.  Included methods for <a href="https://developforperformance.com/FastUtf8.html#DeclarativeQueries">expressive queries against semistructured internationalized content</a> get outstanding performance <a href="https://developforperformance.com/FastUtf8.html#TokensetSearchAndTargetedWildcardSearchDemos">results</a> relative to prior methods.  A <a href="https://developforperformance.com/CDevelopersGuideUtf8.html">family of C-compatible functions</a> does the heavy lifting for FastUtf8 and can be called directly by legacy C code.
-<br />
+<br /><br />
 
 Within the FastUtf8 namespace you’ll find methods that do these operations:
 
