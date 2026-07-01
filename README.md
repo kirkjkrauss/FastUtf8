@@ -28,7 +28,7 @@ A <a href="https://developforperformance.com/UniseriesGuide.html#RangeBasedSlice
 A <a href="https://developforperformance.com/UniseriesGuide.html#fromSlice">fromSlice()</a> constructor, similar to slice() but pointer-based;
 
 <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesConcatenationOperators">Concatenation operators</a> for uint8_t *, for char *, and for Uniseries objects.
-
+<br><br>
 
 <b>Separate</b>
 
