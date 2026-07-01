@@ -54,7 +54,7 @@ A set of <a href="https://developforperformance.com/UniseriesGuide.html#getLengt
 
 A set of <a href="https://developforperformance.com/UniseriesGuide.html#getSizeFoldedMethods">getSizeFolded()</a> methods that precompute the size of a buffer needed to hold content after case folding;
 
-A set of <a href="https://developforperformance.com/UniseriesGuide.html#getFoldedMethods"getFolded()</a> methods that perform case folding;
+A set of <a href="https://developforperformance.com/UniseriesGuide.html#getFoldedMethods">getFolded()</a> methods that perform case folding;
 <br><br>
 
 <b>Evaluate & compare whole content</b>
