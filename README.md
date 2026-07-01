@@ -32,7 +32,7 @@ A <a href="https://developforperformance.com/UniseriesGuide.html#fromSlice">from
 
 <b>Separate</b>
 
-A set of pointer-based <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesContentSeparationMethods"pSeparate() content separation methods</a>, each of which constructs a Uniseries object from a portion of the existing object’s content based on a search for one or more tokens in a set;
+A set of pointer-based <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesContentSeparationMethods">pSeparate() content separation methods</a>, each of which constructs a Uniseries object from a portion of the existing object’s content based on a search for one or more tokens in a set;
 
 A set of pointer-based <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesTokensetSearchMethods">pFindToken()</a> methods that also perform <a href="https://developforperformance.com/FastUtf8.html#TokensetSearch">tokenset search</a>;
 <br><br>
@@ -50,7 +50,7 @@ A <a href="https://developforperformance.com/UniseriesGuide.html#getMetadataMeth
 
 Methods for checking or modifiying the Uniseries object’s <a href="https://developforperformance.com/UniseriesGuide.html#MethodsForSettingCaseSensitivity">case sensitivity</a> and <a href="https://developforperformance.com/UniseriesGuide.html#MethodsForSettingTheLengthLimit">length-limited</a> behavior;
 
-A set of <a href="https://developforperformance.com/UniseriesGuide.html#getLengthMethods">getLength()</a> and <a href="https://developforperformance.com/UniseriesGuide.html#getSizeMethods"getSize()</a> methods that return a code point count or a size in bytes, respectively;
+A set of <a href="https://developforperformance.com/UniseriesGuide.html#getLengthMethods">getLength()</a> and <a href="https://developforperformance.com/UniseriesGuide.html#getSizeMethods">getSize()</a> methods that return a code point count or a size in bytes, respectively;
 
 A set of <a href="https://developforperformance.com/UniseriesGuide.html#getSizeFoldedMethods">getSizeFolded()</a> methods that precompute the size of a buffer needed to hold content after case folding;
 
