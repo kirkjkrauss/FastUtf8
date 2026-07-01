@@ -2,7 +2,7 @@
 This <a href="https://developforperformance.com/FastUtf8.html">package</a> provides fast UTF-8 handling for modern C++ with support for legacy C.
 
 It includes a <a href="https://developforperformance.com/UniseriesGuide.html">FastUtf8::Uniseries C++ class</a> that lets you target UTF-8 for internationalization.  UTF-8 is all you need for working with for most Internet-based content, and targeting it can slash bloat associated with unnecessary encodings.  Included methods for <a href="https://developforperformance.com/FastUtf8.html#DeclarativeQueries">expressive queries against semistructured internationalized content</a> get outstanding performance <a href="https://developforperformance.com/FastUtf8.html#TokensetSearchAndTargetedWildcardSearchDemos">results</a> relative to prior methods.  A <a href="https://developforperformance.com/CDevelopersGuideUtf8.html">family of C-compatible functions</a> does the heavy lifting for FastUtf8 and can be called directly by legacy C code.
-
+<br />
 
 Within the FastUtf8 namespace you’ll find methods that do these operations:
 
@@ -19,7 +19,7 @@ A pair of <a href="https://developforperformance.com/UniseriesGuide.html#RangeBa
 A <a href="https://developforperformance.com/UniseriesGuide.html#Destructor">destructor</a>;
 
 <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesAssignmentOperators">Assignment operators</a> for uint8_t * and for char *;
-
+<br />
 
 <b>Slice & concatenate</b>
 
@@ -35,7 +35,7 @@ A <a href="https://developforperformance.com/UniseriesGuide.html#fromSlice">from
 A set of pointer-based <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesContentSeparationMethods"pSeparate() content separation methods</a>, each of which constructs a Uniseries object from a portion of the existing object’s content based on a search for one or more tokens in a set;
 
 A set of pointer-based <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesTokensetSearchMethods">pFindToken()</a> methods that also perform <a href="https://developforperformance.com/FastUtf8.html#TokensetSearch">tokenset search</a>;
-
+<br />
 
 <b>Access</b>
 
@@ -44,7 +44,7 @@ An <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesItera
 A set of <a href="https://developforperformance.com/UniseriesGuide.html#GetContentMethods">getContent()</a> methods;
 
 A <a href="https://developforperformance.com/UniseriesGuide.html#getMetadataMethod">getMetadata()</a> method for direct access to a Uniseries object’s <a href="https://developforperformance.com/UniseriesGuide.html#Flags">flags</a> and length;
-
+<br />
 
 <b>Length check & case fold</b>
 
@@ -55,14 +55,14 @@ A set of <a href="https://developforperformance.com/UniseriesGuide.html#getLengt
 A set of <a href="https://developforperformance.com/UniseriesGuide.html#getSizeFoldedMethods">getSizeFolded()</a> methods that precompute the size of a buffer needed to hold content after case folding;
 
 A set of <a href="https://developforperformance.com/UniseriesGuide.html#getFoldedMethods"getFolded()</a> methods that perform case folding;
-
+<br />
 
 <b>Evaluate & compare whole content</b>
 
 An <a href="https://developforperformance.com/UniseriesGuide.html#Is7BitMethod">is7Bit() method</a> that indicates whether content is entirely ASCII text;
 
 <a href="https://developforperformance.com/UniseriesGuide.html#EqualityOperators">Equality operators</a> and <a href="https://developforperformance.com/UniseriesGuide.html#caseCompareMethods">caseCompare() methods</a>;
-
+<br />
 
 <b>Basic full-text search</b>
 
@@ -75,7 +75,7 @@ A similar set of <a href="https://developforperformance.com/UniseriesGuide.html#
 A set of <a href="https://developforperformance.com/UniseriesGuide.html#caseContainsMethodsForRawBufferContent">caseContains() methods</a>, similar to contains() but case-insensitive;
 
 A set of <a href="https://developforperformance.com/UniseriesGuide.html#caseFindMethodsForRawBufferContent">caseFind()</a> and <a href="https://developforperformance.com/UniseriesGuide.html#casepFindMethodsForRawBufferContent">casepFind()</a> case-insensitive methods;
-
+<br />
 
 <b>Wildcard techniques</b>
 
@@ -84,7 +84,7 @@ A set of <a href="https://developforperformance.com/UniseriesGuide.html#wildComp
 A set of <a href="https://developforperformance.com/UniseriesGuide.html#wildCaseCompareMethods">wildCaseCompare()</a> and <a href="https://developforperformance.com/UniseriesGuide.html#caseCompareWildMethods">caseCompareWild()</a> methods for case-insensitive matching;
 
 A family of <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesMethodsForTargetedWildcardSearch">pFindWild()</a> and <a href="https://developforperformance.com/UniseriesGuide.html#CasepFindWildMethods">casepFindWild()</a> methods for <a href="https://developforperformance.com/FastUtf8.html#TargetedWildcardSearch">targeted wildcard search</a>;
-
+<br />
 
 <b>Other features</b>
 
@@ -97,6 +97,6 @@ A pair of <a href="https://developforperformance.com/UniseriesGuide.html#Validat
 A pair of <a href="https://developforperformance.com/UniseriesGuide.html#Convert8BitAsciiMethods">methods for converting 8-bit ASCII text to UTF-8</a>; and
 
 An <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesOutputStreamOperator">output stream operator</a>.
-
+<br />
 
 Documentation is available at https://developforperformance.com including an <a href="https://developforperformance.com/FastUtf8.html">overview</a>, which introduces the <a href="https://developforperformance.com/FastUtf8.html#TargetedWildcardSearch">targeted wildcard search</a> and <a href="https://developforperformance.com/FastUtf8.html#TokensetSearch">tokenset search</a> techniques for <a href="https://developforperformance.com/FastUtf8.html#DeclarativeQueries">declarative functionality</a>, as well as a C++ developer’s guide and reference for the <a href="https://developforperformance.com/UniseriesGuide.htm">FastUtf8::Uniseries class</a>, plus a legacy C developer’s guide and reference for the <a href="https://developforperformance.com/CDevelopersGuideUtf8.html">*Utf8() family of functions</a> underlying the Uniseries class.
