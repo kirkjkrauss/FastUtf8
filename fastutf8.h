@@ -1300,22 +1300,24 @@ public:
    bool caseCompareWild(const FastUtf8::Uniseries& wild) const noexcept;
 
    // The pFindWild() partial content comparison method scans the "this" 
-   // content for a first match on the inbound search pattern which is 
-   // expected to contain wildcards.  Returns a pointer to the first matching 
-   // portion of the content.  The optional parameters are returned targeted 
-   // wildcard matching results, for example given this sentence:
+   // content for a first match on the inbound search pattern, which is 
+   // expected to contain wildcards, and returns a pointer to the location
+   // within the the content corresponding to any first matching ‘*’ wildcard.
+   // The optional parameters are updated or returned match results.  For 
+   // example, given this content and input:
    //
    // content: "This part is skipped, but here is some content to be matched."
-   // pFirst:                            "here is some content to be matched." 
-   // pWild:   "some*to*match"                    (location provided by caller)
+   // ppFirst:                           "here is some content to be matched." 
+   // ppWild:   "some*to*match"                   (location provided by caller)
    //
-   // That is, if the caller points pFirst to "here is some content to be 
-   // matched" and provides pointers for ppLast and ppTarget, the method will 
-   // set the pointers within the content, this way:
+   // That is, if the caller points ppFirst to "here is some content to be 
+   // matched" and provides addresses for ppLast and ppTarget, the method will 
+   // provide pointers to matching locations within the content, this way:
    // 
-   // return value: "some content to be matched."  (location of first match)
-   // *ppLast:                             "hed."  (location set by the method)
-   // *ppTarget:                       "matched."  (location set by the method)
+   // return value:     " content to be matched."  (match on first wildcard)
+   // *ppFirst:     "some content to be matched."  (start of overall match)
+   // *ppLast:                             "hed."  (end of overall match)
+   // *ppTarget:                       "matched."  (match on last wildcard)
    //
    // This is useful for seeking a relatively large portion of content that 
    // includes a specified target portion within it.  The method provides a 
