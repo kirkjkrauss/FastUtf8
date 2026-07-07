@@ -658,18 +658,22 @@ typedef unsigned __int64   uint64_t;
 
   // Targeted wildcard search.
   //
-  // Given UTF-8 content, and given a UTF-8 search pattern that can include 
-  // '*' and '?' wildcards, searches the content for a match.  If a match is 
-  // found, sets *ppLast and *ppTarget as follows:
+  // Given UTF-8 content, and given a UTF-8 search pattern that includes at 
+  // least one '*' wildcard and that can include '?' wildcards, searches the 
+  // content for a match.  If a match is found, sets *ppFirst, *ppLast, and 
+  // *ppTarget as follows...
   //
-  // *ppLast will point to the location within the content where the 
-  //  match ends, and
-  // *ppTarget will point to the location where the last matching portion of 
-  // the content begins, i.e., the content corresponding to the portion of the 
-  // search pattern after the last '*' wildcard.
+  // *ppFirst will point to the location within the content where the 
+  //  overall match begins,
+  // *ppLast will point to the location where the overall match ends, and
+  // *ppTarget will point to the location where the last where the last match 
+  // on a '*' wildcard begins, i.e., the content corresponding to the last '*' 
+  // wildcard in the search pattern.
   //
-  // Returns a pointer to the beginning of the match, corresponding to the 
-  // beginning of the search pattern.
+  // ...and returns a to pointer to the location where the first '*' wildcard 
+  // match begins, i.e., the content corresponding to the first '*' wildcard.
+  // If no match is found, or if the search pattern contains no '*' wildcard, 
+  // sets *ppFirst, *ppLast, and *ppTarget to nullptr and returns nullptr.
   //
   uint8_t * WildFindUtf8(
        uint8_t       **ppFirst,       // Updated location of content to search
