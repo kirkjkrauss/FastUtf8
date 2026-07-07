@@ -6042,9 +6042,10 @@ int WildLenCaseCompareUtf8(
 
 // Case-sensitive targeted wildcard search for null-terminated content.
 //
-// Given UTF-8 content, and given a UTF-8 search pattern that can include 
-// '*' and '?' wildcards, searches the content for a match.  If a match is 
-// found, sets *ppFirst, *ppLast, and *ppTarget as follows:
+// Given null-terminated UTF-8 content, and given a null-terminated UTF-8 
+// search pattern that includes at least one '*' wildcard and that can include 
+// '?' wildcards, searches the content for a match.  If a match is found, sets 
+// *ppFirst, *ppLast, and *ppTarget as follows:
 //
 // *ppFirst is given as the beginning of the content to search.  If a match 
 //    is found, *ppFirst will point to the location within the content where 
@@ -6053,9 +6054,9 @@ int WildLenCaseCompareUtf8(
 //    match ends, and
 // *ppTarget will point to the location where the last wildcard-matching 
 //    portion of the content begins, i.e., the content corresponding to the 
-//    portion of the search pattern after the last '*' wildcard.
+//    the last '*' wildcard in the search pattern.
 //
-// Returns a pointer to the content corresponding to any first matching '*' 
+// Returns a pointer to the content corresponding to the first matching '*' 
 // wildcard in the search pattern.  If no match is found, or if no first 
 // wildcard is found, sets *ppFirst, *ppLast, and *ppTarget to NULLPTR and 
 // returns NULLPTR.
@@ -6668,9 +6669,10 @@ uint8_t * WildFindUtf8(
 
 // Case-sensitive targeted wildcard search for length-limited content.
 //
-// Given UTF-8 content, and given a UTF-8 search pattern that can include 
-// '*' and '?' wildcards, searches the content for a match.  If a match is 
-// found, sets *ppFirst, *ppLast, and *ppTarget as follows:
+// Given length-limited UTF-8 content, and given a length-limited UTF-8 search 
+// pattern that includes at least one '*' wildcard and that can include '?' 
+// wildcards, searches the content for a match.  If a match is found, sets 
+// *ppFirst, *ppLast, and *ppTarget as follows:
 //
 // *ppFirst is given as the beginning of the content to search.  If a match 
 //    is found, *ppFirst will point to the location within the content where 
@@ -6679,9 +6681,9 @@ uint8_t * WildFindUtf8(
 //    match ends, and
 // *ppTarget will point to the location where the last wildcard-matching 
 //    portion of the content begins, i.e., the content corresponding to the 
-//    portion of the search pattern after the last '*' wildcard.
+//    the last '*' wildcard in the search pattern.
 //
-// Returns a pointer to the content corresponding to any first matching '*' 
+// Returns a pointer to the content corresponding to the first matching '*' 
 // wildcard in the search pattern.  If no match is found, or if no first 
 // wildcard is found, sets *ppFirst, *ppLast, and *ppTarget to NULLPTR and 
 // returns NULLPTR.
@@ -7375,10 +7377,10 @@ uint8_t * WildLenFindUtf8(
 
 // Case-insensitive targeted wildcard search for null-terminated content.
 //
-// Given UTF-8 content, and given a UTF-8 search pattern that can include 
-// '*' and '?' wildcards, case folds both the content and the search pattern 
-// greedily while seaching for a match.  If a match is found, sets *ppFirst, 
-// *ppLast, and *ppTarget as follows:
+// Given null-terminated UTF-8 content, and given a null-terminated UTF-8 
+// search pattern that includes at least one '*' wildcard and that can include 
+// '?' wildcards, searches the content for a case-insensitive match.  If a 
+// match is found, sets *ppFirst, *ppLast, and *ppTarget as follows:
 //
 // *ppFirst is given as the beginning of the content to search.  If a match 
 //    is found, *ppFirst will point to the location within the content where 
@@ -7387,9 +7389,9 @@ uint8_t * WildLenFindUtf8(
 //    match ends, and
 // *ppTarget will point to the location where the last wildcard-matching 
 //    portion of the content begins, i.e., the content corresponding to the 
-//    portion of the search pattern after the last '*' wildcard.
+//    the last '*' wildcard in the search pattern.
 //
-// Returns a pointer to the content corresponding to any first matching '*' 
+// Returns a pointer to the content corresponding to the first matching '*' 
 // wildcard in the search pattern.  If no match is found, or if no first 
 // wildcard is found, sets *ppFirst, *ppLast, and *ppTarget to NULLPTR and 
 // returns NULLPTR.
@@ -8002,10 +8004,10 @@ uint8_t * WildCaseFindUtf8(
 
 // Case-insensitive targeted wildcard search for length-limited content.
 //
-// Given UTF-8 content, and given a UTF-8 search pattern that can include 
-// '*' and '?' wildcards, case folds both the content and the search pattern 
-// greedily while seaching for a match.  If a match is found, sets *ppFirst, 
-// *ppLast, and *ppTarget as follows:
+// Given length-limited UTF-8 content, and given a length-limited UTF-8 search 
+// pattern that includes at least one '*' wildcard and that can include '?' 
+// wildcards, searches the content for a case-insensitive match.  If a match 
+// is found, sets *ppFirst, *ppLast, and *ppTarget as follows:
 //
 // *ppFirst is given as the beginning of the content to search.  If a match 
 //    is found, *ppFirst will point to the location within the content where 
@@ -8014,9 +8016,9 @@ uint8_t * WildCaseFindUtf8(
 //    match ends, and
 // *ppTarget will point to the location where the last wildcard-matching 
 //    portion of the content begins, i.e., the content corresponding to the 
-//    portion of the search pattern after the last '*' wildcard.
+//    the last '*' wildcard in the search pattern.
 //
-// Returns a pointer to the content corresponding to any first matching '*' 
+// Returns a pointer to the content corresponding to the first matching '*' 
 // wildcard in the search pattern.  If no match is found, or if no first 
 // wildcard is found, sets *ppFirst, *ppLast, and *ppTarget to NULLPTR and 
 // returns NULLPTR.
