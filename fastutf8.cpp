@@ -6134,11 +6134,11 @@ uint8_t * WildFindUtf8(
                   }
                }
 
-               if (*pSearchPattern)  // "?*?" doesn't match "a".
+               if (*pSearchPattern)  // "?*?" doesn't find "a".
                {
                    pTame = pTameMatch = pWildMatch = nullptr;
                }
-               else                // "*" matches "a".
+               else                // "*?" finds "a".
                {
                   CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
                }
@@ -6166,7 +6166,7 @@ uint8_t * WildFindUtf8(
          }
          else if (!*pSearchPattern)
          {
-            if (ppTarget)          // "*" matches "a".
+            if (ppTarget)          // "*" finds "a".
             {
                *ppTarget = pTame;
             }
@@ -6257,7 +6257,7 @@ uint8_t * WildFindUtf8(
                {
                   if (!(*(++pWild)))
                   {
-                     if (ppLast)   // "ab*" matches "ab".
+                     if (ppLast)   // "ab*" finds "...ab".
                      {
                         *ppLast = pTame;
                         CodePointBacktrackUtf8(
@@ -6274,7 +6274,7 @@ uint8_t * WildFindUtf8(
                   }
                }
       
-               if (ppLast)         // "abcd" doesn't match "abc".
+               if (ppLast)         // "*abcd" doesn't find "...abc".
                {
                   *ppLast = nullptr;
                }
@@ -6289,7 +6289,7 @@ uint8_t * WildFindUtf8(
             }
             else if (pWildMatch)
             {
-               if (ppLast)         // "abc" matches "abc".
+               if (ppLast)         // "*abc" finds "...abc".
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -6327,7 +6327,7 @@ uint8_t * WildFindUtf8(
 
             if (!*pWild)
             {
-               if (ppTarget)       // "ab*" matches "abc".
+               if (ppTarget)       // "ab*" finds "...abc".
                {
                   *ppTarget = pTame;
                }
@@ -6354,7 +6354,7 @@ uint8_t * WildFindUtf8(
                {
                   if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                   {
-                     if (pTameMatch)   // "a*bc" doesn't match "ab".
+                     if (pTameMatch)   // "a*bc" doesn't find "...ab".
                      {
                         pTame = pTameMatch;
                         CodePointAdvanceUtf8((const uint8_t **) &pTame);
@@ -6372,7 +6372,7 @@ uint8_t * WildFindUtf8(
          }
          else if (!CodePointCompareUtf8(pWild, pTame) && *pWild != '?')
          {
-            if (pTameMatch)            // "abc" doesn't match "abd".
+            if (pTameMatch)            // "*abc" doesn't find "...abd".
             {
                pTame = pTameMatch;
             }
@@ -6382,7 +6382,7 @@ uint8_t * WildFindUtf8(
          }
          else if (!pTameMatch)
          {
-            pTameMatch = pTame;        // Got prospective match on search pattern.
+            pTameMatch = pTame;        // Got a prospective match.
          }
 
          // Everything's a match, so far.
@@ -6409,7 +6409,7 @@ uint8_t * WildFindUtf8(
 
          if (!*pWild)
          {
-            if (ppTarget)          // "a*c*" matches "abcd".
+            if (ppTarget)          // "a*c*" finds "...abcd".
             {
                *ppTarget = pTame;
             }
@@ -6431,7 +6431,7 @@ uint8_t * WildFindUtf8(
 
          if (!*pTame)
          {
-            if (ppLast)            // "*bcd*" doesn't match "abc".
+            if (ppLast)            // "*bcd*" doesn't find "...abc".
             {
                *ppLast = nullptr;
             }
@@ -6452,7 +6452,7 @@ uint8_t * WildFindUtf8(
             {
                if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                {
-                  if (pTameMatch)      // "a*b*c" doesn't match "ab".
+                  if (pTameMatch)      // "a*b*c" doesn't find "...ab".
                   {
                      pTame = pTameMatch;
                   }
@@ -6472,7 +6472,7 @@ uint8_t * WildFindUtf8(
          // The equivalent portion of the upper loop is really simple.
          if (!*pTame)
          {
-            if (ppLast)            // "*bc" doesn't match "abcd".
+            if (ppLast)            // "*bc" doesn't find "...abcd".
             {
                *ppLast = nullptr;
             }
@@ -6511,7 +6511,7 @@ uint8_t * WildFindUtf8(
                   {
                      CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
 
-                     if (ppLast)   // "a*?" matches "abcd".
+                     if (ppLast)   // "a*?" finds "...abcd".
                      {
                         *ppLast = pTame;
                      }
@@ -6532,14 +6532,14 @@ uint8_t * WildFindUtf8(
                      return pWildMatch;
                   }
 
-                  if (ppLast)      // "a*?d" matches "abcd".
+                  if (ppLast)      // "a*?d" finds "...abcd".
                   {
                      *ppLast = pTameSequence;
                   }
                }
                else
                {
-                  if (ppLast)      // "a*c*d" matches "abcd".
+                  if (ppLast)      // "a*c*d" finds "...abcd".
                   {
                      *ppLast = pTame;
                      CodePointBacktrackUtf8((const uint8_t **) ppLast, 
@@ -6589,7 +6589,7 @@ uint8_t * WildFindUtf8(
             {
                if (!*pTameSequence)
                {
-                  if (ppLast)      // "*a*b" doesn't match "ac".
+                  if (ppLast)      // "*a*b" doesn't find "...ac".
                   {
                      *ppLast = nullptr;
                   }
@@ -6608,7 +6608,7 @@ uint8_t * WildFindUtf8(
          }
 		 else
          {
-            if (ppLast)            // "?a*" doesn't match "ab".
+            if (ppLast)            // "?a*" doesn't find "...ab".
             {
                *ppLast = nullptr;
             }
@@ -6628,7 +6628,7 @@ uint8_t * WildFindUtf8(
       {
          if (!*pWild)
          {
-            if (ppLast)            // "*bc" matches "abc".
+            if (ppLast)            // "*bc" finds "...abc".
             {
                *ppLast = pTame;
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -6644,7 +6644,7 @@ uint8_t * WildFindUtf8(
          }
          else
          {
-            if (ppLast)            // "*bcd" doesn't match "abc".
+            if (ppLast)            // "*bcd" doesn't find "...abc".
             {
                *ppLast = nullptr;
             }
@@ -6779,11 +6779,11 @@ uint8_t * WildLenFindUtf8(
                   }
                }
 
-               if (*pSearchPattern)  // "?*?" doesn't match "a".
+               if (*pSearchPattern)  // "?*?" doesn't find "a".
                {
                    pTame = pTameMatch = pWildMatch = nullptr;
                }
-               else                // "*" matches "a".
+               else                // "*?" finds "a".
                {
                   CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
                }
@@ -6810,7 +6810,7 @@ uint8_t * WildLenFindUtf8(
          }
          else if (lenPattern <= iSearchPattern || !*pSearchPattern)
          {
-            if (ppTarget)          // "*" matches "a".
+            if (ppTarget)          // "*" finds "a".
             {
                *ppTarget = pTame;
             }
@@ -6907,7 +6907,7 @@ uint8_t * WildLenFindUtf8(
                {
                   if (lenPattern <= ++iWild)
                   {
-                     if (ppLast)   // "ab*" matches "ab".
+                     if (ppLast)   // "ab*" finds "...ab".
                      {
                         *ppLast = pTame;
                         CodePointBacktrackUtf8(
@@ -6924,7 +6924,7 @@ uint8_t * WildLenFindUtf8(
                   }
                }
 
-               if (ppLast)         // "abcd" doesn't match "abc".
+               if (ppLast)         // "*abcd" doesn't find "...abc".
                {
                   *ppLast = nullptr;
                }
@@ -6939,7 +6939,7 @@ uint8_t * WildLenFindUtf8(
             }
             else if (pWildMatch)
             {
-               if (ppLast)         // "abc" matches "abc".
+               if (ppLast)         // "*abc" finds "...abc".
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -6966,7 +6966,7 @@ uint8_t * WildLenFindUtf8(
          }
          else if (lenPattern <= iWild)
          {
-            if (pTameMatch)        // "abc" doesn't match "abcd".
+            if (pTameMatch)        // "a*c" doesn't find "...abcd".
             {
                pTame = pTameMatch;
                iTame = iTameMatch;
@@ -6996,7 +6996,7 @@ uint8_t * WildLenFindUtf8(
 
             if (!*pWild)
             {
-               if (ppTarget)       // "ab*" matches "abc".
+               if (ppTarget)       // "ab*" finds "...abc".
                {
                   *ppTarget = pTame;
                }
@@ -7023,7 +7023,7 @@ uint8_t * WildLenFindUtf8(
                {
                   if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                   {
-                     if (pTameMatch)  // "a*bc" doesn't match "ab".
+                     if (pTameMatch)  // "a*bc" doesn't find "...ab".
                      {
                         pTame = pTameMatch;
                         CodePointAdvanceUtf8((const uint8_t **) &pTame);
@@ -7046,7 +7046,7 @@ uint8_t * WildLenFindUtf8(
          }
          else if (!CodePointCompareUtf8(pWild, pTame) && *pWild != '?')
          {
-            if (pTameMatch)        // "abc" doesn't match "abd".
+            if (pTameMatch)        // "*abc" doesn't find "...abd".
             {
                pTame = pTameMatch;
                iTame = iTameMatch;
@@ -7058,7 +7058,7 @@ uint8_t * WildLenFindUtf8(
          }
          else if (!pTameMatch)
          {
-            pTameMatch = pTame;    // Got prospective match on search pattern.
+            pTameMatch = pTame;    // Got a prospective match.
             iTameMatch = iTame;
          }
 
@@ -7087,7 +7087,7 @@ uint8_t * WildLenFindUtf8(
          {
             if (lenPattern <= ++iWild)
             {
-               if (ppLast)         // "ab**c*" matches "abcd".
+               if (ppLast)         // "ab**c*" finds "...abcd".
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -7105,7 +7105,7 @@ uint8_t * WildLenFindUtf8(
 
          if (lenPattern <= iWild || !*pWild)
          {
-            if (ppTarget)          // "a*c*" matches "abcd".
+            if (ppTarget)          // "a*c*" finds "...abcd".
             {
                *ppTarget = pTame;
             }
@@ -7127,7 +7127,7 @@ uint8_t * WildLenFindUtf8(
 
          if (lenContent <= iTame || !*pTame)
          {
-            if (ppLast)            // "*bcd*" doesn't match "abc".
+            if (ppLast)            // "*bcd*" doesn't find "...abc".
             {
                *ppLast = nullptr;
             }
@@ -7148,7 +7148,7 @@ uint8_t * WildLenFindUtf8(
             {
                if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                {
-                  if (pTameMatch)      // "a*b*c" doesn't match "ab".
+                  if (pTameMatch)      // "a*b*c" doesn't find "...ab".
                   {
                      pTame = pTameMatch;
                      iTame = iTameMatch;
@@ -7174,7 +7174,7 @@ uint8_t * WildLenFindUtf8(
          // The equivalent portion of the upper loop is really simple.
          if (lenContent <= iTame || !*pTame)
          {
-            if (ppLast)            // "*bc" doesn't match "abcd".
+            if (ppLast)            // "*bc" doesn't find "...abcd".
             {
                *ppLast = nullptr;
             }
@@ -7213,7 +7213,7 @@ uint8_t * WildLenFindUtf8(
                   {
                      CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
 
-                     if (ppLast)   // "a*?" matches "abcd".
+                     if (ppLast)   // "a*?" finds "...abcd".
                      {
                         *ppLast = pTame;
                      }
@@ -7234,14 +7234,14 @@ uint8_t * WildLenFindUtf8(
                      return pWildMatch;
                   }
 
-                  if (ppLast)      // "a*?d" matches "abcd".
+                  if (ppLast)      // "a*?d" finds "...abcd".
                   {
                      *ppLast = pTameSequence;
                   }
                }
                else
                {
-                  if (ppLast)      // "a*c*d" matches "abcd".
+                  if (ppLast)      // "a*c*d" finds "...abcd".
                   {
                      *ppLast = pTame;
                      CodePointBacktrackUtf8((const uint8_t **) ppLast, 
@@ -7294,7 +7294,7 @@ uint8_t * WildLenFindUtf8(
             {
                if (lenContent <= ++iTameSequence || !*pTameSequence)
                {
-                  if (ppLast)      // "*a*b" doesn't match "ac".
+                  if (ppLast)      // "*a*b" doesn't find "...ac".
                   {
                      *ppLast = nullptr;
                   }
@@ -7314,7 +7314,7 @@ uint8_t * WildLenFindUtf8(
          }
 		 else
          {
-            if (ppLast)            // "?a*" doesn't match "ab".
+            if (ppLast)            // "?a*" doesn't find "...ab".
             {
                *ppLast = nullptr;
             }
@@ -7334,7 +7334,7 @@ uint8_t * WildLenFindUtf8(
       {
          if (lenPattern <= iWild || !*pWild)
          {
-            if (ppLast)            // "*bc" matches "abc".
+            if (ppLast)            // "*bc" finds "...abc".
             {
                *ppLast = pTame;
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -7350,7 +7350,7 @@ uint8_t * WildLenFindUtf8(
          }
          else
          {
-            if (ppLast)            // "*bcd" doesn't match "abc".
+            if (ppLast)            // "*bcd" doesn't find "...abc".
             {
                *ppLast = nullptr;
             }
@@ -7469,11 +7469,11 @@ uint8_t * WildCaseFindUtf8(
                   }
                }
 
-               if (*pSearchPattern)  // "?*?" doesn't match "a".
+               if (*pSearchPattern)  // "?*?" doesn't find "a".
                {
                    pTame = pTameMatch = pWildMatch = nullptr;
                }
-               else                // "*" matches "a".
+               else                // "*?" finds "a".
                {
                   CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
                }
@@ -7501,7 +7501,7 @@ uint8_t * WildCaseFindUtf8(
          }
          else if (!*pSearchPattern)
          {
-            if (ppTarget)          // "*" matches "a".
+            if (ppTarget)          // "*" finds "a".
             {
                *ppTarget = pTame;
             }
@@ -7592,7 +7592,7 @@ uint8_t * WildCaseFindUtf8(
                {
                   if (!(*(++pWild)))
                   {
-                     if (ppLast)   // "ab*" matches "ab".
+                     if (ppLast)   // "ab*" finds "...ab".
                      {
                         *ppLast = pTame;
                         CodePointBacktrackUtf8(
@@ -7609,7 +7609,7 @@ uint8_t * WildCaseFindUtf8(
                   }
                }
       
-               if (ppLast)         // "abcd" doesn't match "abc".
+               if (ppLast)         // "*abcd" doesn't find "...abc".
                {
                   *ppLast = nullptr;
                }
@@ -7624,7 +7624,7 @@ uint8_t * WildCaseFindUtf8(
             }
             else if (pWildMatch)
             {
-               if (ppLast)         // "abc" matches "abc".
+               if (ppLast)         // "*abc" finds "...abc".
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -7662,7 +7662,7 @@ uint8_t * WildCaseFindUtf8(
 
             if (!*pWild)
             {
-               if (ppTarget)       // "ab*" matches "abc".
+               if (ppTarget)       // "ab*" finds "...abc".
                {
                   *ppTarget = pTame;
                }
@@ -7689,7 +7689,7 @@ uint8_t * WildCaseFindUtf8(
                {
                   if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                   {
-                     if (pTameMatch)   // "a*bc" doesn't match "ab".
+                     if (pTameMatch)   // "a*bc" doesn't find "...ab".
                      {
                         pTame = pTameMatch;
                         CodePointAdvanceUtf8((const uint8_t **) &pTame);
@@ -7707,7 +7707,7 @@ uint8_t * WildCaseFindUtf8(
          }
          else if (!CodePointCaseCompareUtf8(pWild, pTame) && *pWild != '?')
          {
-            if (pTameMatch)            // "abc" doesn't match "abd".
+            if (pTameMatch)            // "*abc" doesn't find "...abd".
             {
                pTame = pTameMatch;
             }
@@ -7717,7 +7717,7 @@ uint8_t * WildCaseFindUtf8(
          }
          else if (!pTameMatch)
          {
-            pTameMatch = pTame;        // Got prospective match on search pattern.
+            pTameMatch = pTame;        // Got a prospective match.
          }
 
          // Everything's a match, so far.
@@ -7744,7 +7744,7 @@ uint8_t * WildCaseFindUtf8(
 
          if (!*pWild)
          {
-            if (ppTarget)          // "a*c*" matches "abcd".
+            if (ppTarget)          // "a*c*" finds "...abcd".
             {
                *ppTarget = pTame;
             }
@@ -7766,7 +7766,7 @@ uint8_t * WildCaseFindUtf8(
 
          if (!*pTame)
          {
-            if (ppLast)            // "*bcd*" doesn't match "abc".
+            if (ppLast)            // "*bcd*" doesn't find "...abc".
             {
                *ppLast = nullptr;
             }
@@ -7787,7 +7787,7 @@ uint8_t * WildCaseFindUtf8(
             {
                if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                {
-                  if (pTameMatch)      // "a*b*c" doesn't match "ab".
+                  if (pTameMatch)      // "a*b*c" doesn't find "...ab".
                   {
                      pTame = pTameMatch;
                   }
@@ -7807,7 +7807,7 @@ uint8_t * WildCaseFindUtf8(
          // The equivalent portion of the upper loop is really simple.
          if (!*pTame)
          {
-            if (ppLast)            // "*bc" doesn't match "abcd".
+            if (ppLast)            // "*bc" doesn't find "...abcd".
             {
                *ppLast = nullptr;
             }
@@ -7846,7 +7846,7 @@ uint8_t * WildCaseFindUtf8(
                   {
                      CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
 
-                     if (ppLast)   // "a*?" matches "abcd".
+                     if (ppLast)   // "a*?" finds "...abcd".
                      {
                         *ppLast = pTame;
                      }
@@ -7867,14 +7867,14 @@ uint8_t * WildCaseFindUtf8(
                      return pWildMatch;
                   }
 
-                  if (ppLast)      // "a*?d" matches "abcd".
+                  if (ppLast)      // "a*?d" finds "...abcd".
                   {
                      *ppLast = pTameSequence;
                   }
                }
                else
                {
-                  if (ppLast)      // "a*c*d" matches "abcd".
+                  if (ppLast)      // "a*c*d" finds "...abcd".
                   {
                      *ppLast = pTame;
                      CodePointBacktrackUtf8((const uint8_t **) ppLast, 
@@ -7924,7 +7924,7 @@ uint8_t * WildCaseFindUtf8(
             {
                if (!*pTameSequence)
                {
-                  if (ppLast)      // "*a*b" doesn't match "ac".
+                  if (ppLast)      // "*a*b" doesn't find "...ac".
                   {
                      *ppLast = nullptr;
                   }
@@ -7943,7 +7943,7 @@ uint8_t * WildCaseFindUtf8(
          }
 		 else
          {
-            if (ppLast)            // "?a*" doesn't match "ab".
+            if (ppLast)            // "?a*" doesn't find "...ab".
             {
                *ppLast = nullptr;
             }
@@ -7963,7 +7963,7 @@ uint8_t * WildCaseFindUtf8(
       {
          if (!*pWild)
          {
-            if (ppLast)            // "*bc" matches "abc".
+            if (ppLast)            // "*bc" finds "...abc".
             {
                *ppLast = pTame;
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -7979,7 +7979,7 @@ uint8_t * WildCaseFindUtf8(
          }
          else
          {
-            if (ppLast)            // "*bcd" doesn't match "abc".
+            if (ppLast)            // "*bcd" doesn't find "...abc".
             {
                *ppLast = nullptr;
             }
@@ -8114,11 +8114,11 @@ uint8_t * WildLenCaseFindUtf8(
                   }
                }
 
-               if (*pSearchPattern)  // "?*?" doesn't match "a".
+               if (*pSearchPattern)  // "?*?" doesn't find "a".
                {
                    pTame = pTameMatch = pWildMatch = nullptr;
                }
-               else                // "*" matches "a".
+               else                // "*?" finds "a".
                {
                   CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
                }
@@ -8145,7 +8145,7 @@ uint8_t * WildLenCaseFindUtf8(
          }
          else if (lenPattern <= iSearchPattern || !*pSearchPattern)
          {
-            if (ppTarget)          // "*" matches "a".
+            if (ppTarget)          // "*" finds "a".
             {
                *ppTarget = pTame;
             }
@@ -8242,7 +8242,7 @@ uint8_t * WildLenCaseFindUtf8(
                {
                   if (lenPattern <= ++iWild)
                   {
-                     if (ppLast)   // "ab*" matches "ab".
+                     if (ppLast)   // "ab*" finds "...ab".
                      {
                         *ppLast = pTame;
                         CodePointBacktrackUtf8(
@@ -8259,7 +8259,7 @@ uint8_t * WildLenCaseFindUtf8(
                   }
                }
 
-               if (ppLast)         // "abcd" doesn't match "abc".
+               if (ppLast)         // "*abcd" doesn't find "...abc".
                {
                   *ppLast = nullptr;
                }
@@ -8274,7 +8274,7 @@ uint8_t * WildLenCaseFindUtf8(
             }
             else if (pWildMatch)
             {
-               if (ppLast)         // "abc" matches "abc".
+               if (ppLast)         // "*abc" finds "...abc"..
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -8301,7 +8301,7 @@ uint8_t * WildLenCaseFindUtf8(
          }
          else if (lenPattern <= iWild)
          {
-            if (pTameMatch)        // "abc" doesn't match "abcd".
+            if (pTameMatch)        // "a*c" doesn't find "...abcd".
             {
                pTame = pTameMatch;
                iTame = iTameMatch;
@@ -8331,7 +8331,7 @@ uint8_t * WildLenCaseFindUtf8(
 
             if (!*pWild)
             {
-               if (ppTarget)       // "ab*" matches "abc".
+               if (ppTarget)       // "ab*" finds "...abc".
                {
                   *ppTarget = pTame;
                }
@@ -8358,7 +8358,7 @@ uint8_t * WildLenCaseFindUtf8(
                {
                   if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                   {
-                     if (pTameMatch)  // "a*bc" doesn't match "ab".
+                     if (pTameMatch)  // "a*bc" doesn't find "...ab".
                      {
                         pTame = pTameMatch;
                         CodePointAdvanceUtf8((const uint8_t **) &pTame);
@@ -8381,7 +8381,7 @@ uint8_t * WildLenCaseFindUtf8(
          }
          else if (!CodePointCaseCompareUtf8(pWild, pTame) && *pWild != '?')
          {
-            if (pTameMatch)        // "abc" doesn't match "abd".
+            if (pTameMatch)        // "*abc" doesn't find "...abd".
             {
                pTame = pTameMatch;
                iTame = iTameMatch;
@@ -8393,7 +8393,7 @@ uint8_t * WildLenCaseFindUtf8(
          }
          else if (!pTameMatch)
          {
-            pTameMatch = pTame;    // Got prospective match on search pattern.
+            pTameMatch = pTame;    // Got a prospective match.
             iTameMatch = iTame;
          }
 
@@ -8422,7 +8422,7 @@ uint8_t * WildLenCaseFindUtf8(
          {
             if (lenPattern <= ++iWild)
             {
-               if (ppLast)         // "ab**c*" matches "abcd".
+               if (ppLast)         // "a*c*" finds "...abcd".
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -8440,7 +8440,7 @@ uint8_t * WildLenCaseFindUtf8(
 
          if (lenPattern <= iWild || !*pWild)
          {
-            if (ppTarget)          // "a*c*" matches "abcd".
+            if (ppTarget)          // "*bcd*" doesn't find "...abc".
             {
                *ppTarget = pTame;
             }
@@ -8462,7 +8462,7 @@ uint8_t * WildLenCaseFindUtf8(
 
          if (lenContent <= iTame || !*pTame)
          {
-            if (ppLast)            // "*bcd*" doesn't match "abc".
+            if (ppLast)            // "a*b*c" doesn't find "...ab".
             {
                *ppLast = nullptr;
             }
@@ -8483,7 +8483,7 @@ uint8_t * WildLenCaseFindUtf8(
             {
                if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                {
-                  if (pTameMatch)      // "a*b*c" doesn't match "ab".
+                  if (pTameMatch)      // "*bc" doesn't find "...abcd".
                   {
                      pTame = pTameMatch;
                      iTame = iTameMatch;
@@ -8509,7 +8509,7 @@ uint8_t * WildLenCaseFindUtf8(
          // The equivalent portion of the upper loop is really simple.
          if (lenContent <= iTame || !*pTame)
          {
-            if (ppLast)            // "*bc" doesn't match "abcd".
+            if (ppLast)            // "*bc" doesn't find "...abcd".
             {
                *ppLast = nullptr;
             }
@@ -8548,7 +8548,7 @@ uint8_t * WildLenCaseFindUtf8(
                   {
                      CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
 
-                     if (ppLast)   // "a*?" matches "abcd".
+                     if (ppLast)   // "a*?" finds "...abcd".
                      {
                         *ppLast = pTame;
                      }
@@ -8569,14 +8569,14 @@ uint8_t * WildLenCaseFindUtf8(
                      return pWildMatch;
                   }
 
-                  if (ppLast)      // "a*?d" matches "abcd".
+                  if (ppLast)      // "a*?d" finds "...abcd".
                   {
                      *ppLast = pTameSequence;
                   }
                }
                else
                {
-                  if (ppLast)      // "a*c*d" matches "abcd".
+                  if (ppLast)      // "a*c*d" finds "...abcd".
                   {
                      *ppLast = pTame;
                      CodePointBacktrackUtf8((const uint8_t **) ppLast, 
@@ -8629,7 +8629,7 @@ uint8_t * WildLenCaseFindUtf8(
             {
                if (lenContent <= ++iTameSequence || !*pTameSequence)
                {
-                  if (ppLast)      // "*a*b" doesn't match "ac".
+                  if (ppLast)      // "*a*b" doesn't find "...ac".
                   {
                      *ppLast = nullptr;
                   }
@@ -8649,7 +8649,7 @@ uint8_t * WildLenCaseFindUtf8(
          }
 		 else
          {
-            if (ppLast)            // "?a*" doesn't match "ab".
+            if (ppLast)            // "?a*" doesn't find "...ab".
             {
                *ppLast = nullptr;
             }
@@ -8669,7 +8669,7 @@ uint8_t * WildLenCaseFindUtf8(
       {
          if (lenPattern <= iWild || !*pWild)
          {
-            if (ppLast)            // "*bc" matches "abc".
+            if (ppLast)            // "*bc" finds "...abc".
             {
                *ppLast = pTame;
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -8685,7 +8685,7 @@ uint8_t * WildLenCaseFindUtf8(
          }
          else
          {
-            if (ppLast)            // "*bcd" doesn't match "abc".
+            if (ppLast)            // "*bcd" doesn't find "...abc".
             {
                *ppLast = nullptr;
             }
