@@ -78,7 +78,7 @@ inline int CodePointAdvanceUtf8(const uint8_t **ppContent)
        ((**ppContent > SINGLETON_LIMIT) && *(1 + *ppContent)) + 
        ((**ppContent > TWOFER_LIMIT) && *(2 + *ppContent)) + 
        ((**ppContent > THREESOME_LIMIT) && *(3 + *ppContent));
-   return (bool) **ppContent;
+   return (BOOL) **ppContent;
 }
 
 // Given a pointer to a UTF-8 code point and a pointer to the beginning of 
