@@ -21,6 +21,9 @@
 #define FASTUTF8_H
 
 #if defined(__cplusplus)
+#include <set>
+#include <array>
+#include <algorithm>
 #include <memory>
 #include <cstdint>
 #include <cstddef>
@@ -29,6 +32,11 @@ using std::uint8_t;
 using std::uint32_t;
 using std::size_t;
 
+#else   // !__cplusplus
+#include <stdint.h>
+#include <stddef.h>
+#endif  // !__cplusplus
+  
 // The FastUtf8 namespace provides a simple, understandable C++ interface for 
 // efficiently working with both internationalized / symbolic content and 
 // ASCII text.  For C++ builds, the C-style *Utf8() functions are declared in 
@@ -49,11 +57,9 @@ using std::size_t;
 //
 extern "C"
 {
-
-#else   // !__cplusplus
-#include <stdint.h>
-#include <stddef.h>
-#endif  // !__cplusplus
+  //
+  // UTF-8 content handling functions.
+  //
 
   // Counts the number of contiguous valid code points in the given null-
   // terminated content, starting from the beginning of the content.  Returns 
@@ -61,16 +67,16 @@ extern "C"
   // false otherwise.
   //
   bool ValidateUtf8(
-            const uint8_t *pContent,       // Content to validate
-            int           *piCount);       // Returned code point count
+        const uint8_t *pContent,       // Content to validate
+        int           *piCount);       // Returned code point count
 
   // Validates the given content, up to the specified number of code points, 
   // starting from the beginning of the content.  Returns true if as many code 
   // point are valid.  Returns false otherwise.
   //
   bool LenValidateUtf8(
-            const uint8_t *pContent,       // Content to validate
-            int           lenContent);     // Code point count (specified)
+        const uint8_t *pContent,       // Content to validate
+        int           lenContent);     // Code point count (specified)
 
   // Validates the given content, up to a terminating null, starting from the 
   // beginning of the content.  Counts the number of contiguous valid code 
@@ -82,9 +88,9 @@ extern "C"
   // handle UTF-8 content.
   //
   size_t ValidateWithIs7BitUtf8(
-            const uint8_t *pContent,       // Content to validate
-            int  *piCount,                 // Returned code point count
-            bool *pbIs7BitCharString);     // Returned 7-bit ASCII flag
+        const uint8_t *pContent,       // Content to validate
+        int  *piCount,                 // Returned code point count
+        bool *pbIs7BitCharString);     // Returned 7-bit ASCII flag
 
   // Validates the given content, up to the specified number of code points, 
   // starting from the beginning of the content.  Returns the number of bytes 
@@ -93,9 +99,9 @@ extern "C"
   // ASCII character.
   //
   size_t LenValidateWithIs7BitUtf8(
-            const uint8_t *pContent,       // Content to validate
-            int  lenContent,               // Code point count (specified)
-            bool *pbIs7BitCharString);     // Returned 7-bit ASCII flag
+        const uint8_t *pContent,       // Content to validate
+        int  lenContent,               // Code point count (specified)
+        bool *pbIs7BitCharString);     // Returned 7-bit ASCII flag
 
   // Given 8-bit ASCII content, allocates a buffer for UTF-8 content and 
   // places the equivalent UTF-8 content in it.  If if FREE_INVALID_CONTENT is 
@@ -105,8 +111,8 @@ extern "C"
   // UTF-8 content is deallocated via free(), once it is no longer in use.
   //
   uint8_t * Convert8BitAsciiToUtf8(
-            const char *pContent,          // Content to convert
-            int        *lenContent);       // Returned length (in code points)
+        const char *pContent,          // Content to convert
+        int        *lenContent);       // Returned length (in code points)
 
   // Given an 8-bit ASCII string and its size in bytes, allocates a buffer 
   // sufficient for the equivalent UTF-8 content and places that content in 
@@ -118,14 +124,14 @@ extern "C"
   // UTF-8 content is deallocated via free(), once it is no longer in use.
   //
   uint8_t * LenConvert8BitAsciiToUtf8(
-            const char   *pContent,        // Content to convert
-            size_t       sizeContent);     // Content size (bytes)
+        const char   *pContent,        // Content to convert
+        size_t       sizeContent);     // Content size (bytes)
 
   // Initializes sets of mappings for case folding.  The mappings are used by 
   // the other functions here for case-insensitive string matching.
   //
   void CaseMappingSetupUtf8(
-            void);
+        void);
 
   // Given a buffer containing null-terminated UTF-8 content, anticipates the 
   // size of its folded equivalent, in bytes.  Anticipates 4 bytes for the 
@@ -133,7 +139,7 @@ extern "C"
   // not valid UTF-8.  DOES NOT CHECK FOR INVALID POINTERS. 
   //
   size_t SizeOfFoldedUtf8(
-            const uint8_t *pContent);      // Content to evaluate
+        const uint8_t *pContent);      // Content to evaluate
 
   // Given a buffer containing UTF-8 content and a number of code points in 
   // the content, anticipates the size of the content's folded equivalent, in 
@@ -142,8 +148,8 @@ extern "C"
   // INVALID POINTERS. 
   //
   size_t SizeOfFoldedLenUtf8(
-            const uint8_t *pContent,       // Content to evaluate
-            int           lenContent);     // Code point count
+        const uint8_t *pContent,       // Content to evaluate
+        int           lenContent);     // Code point count
 
   // Given a source buffer containing UTF-8 content, places its folded 
   // equivalent into the given destination buffer, up to the specified number 
@@ -158,9 +164,9 @@ extern "C"
   //       an advance call to SizeOfFoldedUtf8() or to SizeOfFoldedLenUtf8().
   //
   uint8_t * ToFoldedUtf8(
-            uint8_t       *pDestination,     // Outbound buffer
-            const uint8_t *pSource,          // Inbound buffer
-            size_t         sizeDestination); // Size of outbound buffer (bytes)
+        uint8_t       *pDestination,     // Outbound buffer
+        const uint8_t *pSource,          // Inbound buffer
+        size_t         sizeDestination); // Size of outbound buffer (bytes)
 
   //
   //    THE ROUTINES BELOW THIS COMMENT PERFORM NO UTF-8 VALIDATION 
@@ -171,19 +177,19 @@ extern "C"
   // in it.
   //
   int CodePointCountUtf8(
-            const uint8_t *pContent);      // Content to evaluate
+        const uint8_t *pContent);      // Content to evaluate
 
   // Given null-terminated UTF-8 content, returns the number of bytes in it.
   //
   size_t SizeOfUtf8(
-            const uint8_t *pContent);      // Content to evaluate
+        const uint8_t *pContent);      // Content to evaluate
 
   // Given UTF-8 content and a count of the code points in it, returns the 
   // number of bytes in it.
   //
   size_t SizeOfLenUtf8(
-            const uint8_t *pContent,       // Content to evaluate
-            int           lenContent);     // Code point count
+        const uint8_t *pContent,       // Content to evaluate
+        int           lenContent);     // Code point count
 
   // Given a byte range comprising UTF-8 content, returns the number of code 
   // points in the range.  Returns -1 if the range does not begin or end at 
@@ -191,8 +197,8 @@ extern "C"
   // OTHER POINTER VALIDATION.  
   //
   int LenSizeOfUtf8(
-            const uint8_t *pContent,       // Content to evaluate
-            size_t        sizeContent);    // Size (bytes)
+        const uint8_t *pContent,       // Content to evaluate
+        size_t        sizeContent);    // Size (bytes)
 
   // Given null-terminated UTF-8 content, determines whether it comprises 
   // entirely 7-bit "half ASCII" characters, which would make it compatible 
@@ -200,32 +206,32 @@ extern "C"
   // string, and false otherwise.
   //
   bool Is7BitUtf8(
-            uint8_t *pContent);            // Content to evaluate
+        uint8_t *pContent);            // Content to evaluate
 
   // Given UTF-8 content and its length in code points, determines whether it 
   // comprises entirely 7-bit "half ASCII" characters.  Returns true for a 
   // 7-bit ASCII string, and false otherwise.
   //
   bool IsLen7BitUtf8(
-            uint8_t *pContent,             // Content to evaluate
-            int     lenContent);           // Code point count
+        uint8_t *pContent,             // Content to evaluate
+        int     lenContent);           // Code point count
 
   // Copies UTF-8 (or any) null-terminated content to the given destination 
   // buffer from the given source buffer.  DOES NOT CHECK FOR BUFFER OVERFLOW, 
   // BUFFER OVERLAP, OR INVALID POINTERS.
   //
   uint8_t * CopyUtf8(
-            uint8_t       *pDestination,   // Buffer
-            const uint8_t *pSource);       // Content to copy
+        uint8_t       *pDestination,   // Buffer
+        const uint8_t *pSource);       // Content to copy
 
   // Copies UTF-8 content to the given destination buffer from the given 
   // source buffer, up to the specified number of code points.  DOES NOT CHECK 
   // FOR BUFFER OVERFLOW, BUFFER OVERLAP, OR INVALID POINTERS.
   //
   uint8_t * LenCopyUtf8(
-            uint8_t       *pDestination,   // Buffer
-            const uint8_t *pSource,        // Content to copy
-            int           lenContent);     // Code point count
+        uint8_t       *pDestination,   // Buffer
+        const uint8_t *pSource,        // Content to copy
+        int           lenContent);     // Code point count
 
   // Allocates a buffer and copies UTF-8 content to it from the given 
   // null-terminated source buffer.  DOES NOT CHECK FOR AN INVALID SOURCE 
@@ -235,7 +241,7 @@ extern "C"
   // deallocated via free(), once it is no longer in use.
   //
   uint8_t * DuplicateUtf8(
-            const uint8_t *pSource);       // Content to copy
+        const uint8_t *pSource);       // Content to copy
 
   // Allocates a buffer and copies UTF-8 content to it from the given source 
   // buffer, up to the specified number of code points.  DOES NOT CHECK FOR AN 
@@ -245,8 +251,8 @@ extern "C"
   // deallocated via free(), once it is no longer in use.
   //
   uint8_t * LenDuplicateUtf8(
-            const uint8_t *pSource,        // Content to copy
-            int           lenContent);     // Code point count
+        const uint8_t *pSource,        // Content to copy
+        int           lenContent);     // Code point count
 
   // Given a buffer partially initialized with null-terminated UTF-8 content, 
   // copies additional null-terminated UTF-8 content to it, beginning by 
@@ -256,9 +262,9 @@ extern "C"
   // false otherwise.
   //
   uint8_t * ConcatenateUtf8(
-            uint8_t       *pContent,             // Original content
-            size_t        sizeContentBuffer,     // Whole buffer size
-            const uint8_t *pAdditionalContent);  // Content to add
+        uint8_t       *pContent,             // Original content
+        size_t        sizeContentBuffer,     // Whole buffer size
+        const uint8_t *pAdditionalContent);  // Content to add
 
   // Given a buffer partially initialized with UTF-8 content comprising a 
   // specified number of code points, copies additional UTF-8 content to it, 
@@ -268,11 +274,11 @@ extern "C"
   // accommodate the total content, and false otherwise.
   //
   uint8_t * LenConcatenateUtf8(
-            uint8_t       *pContent,             // Original content
-            size_t        sizeContentBuffer,     // Whole buffer size
-            const uint8_t *pAdditionalContent,   // Content to add
-            int           lenContent,            // Original code point count
-            int           lenAdditionalContent); // Added code point count
+        uint8_t       *pContent,             // Original content
+        size_t        sizeContentBuffer,     // Whole buffer size
+        const uint8_t *pAdditionalContent,   // Content to add
+        int           lenContent,            // Original code point count
+        int           lenAdditionalContent); // Added code point count
 
   // Given a pointer to UTF-8 content and a pointer to one or more delimiter 
   // code points, searches the content for the first occurrence of any 
@@ -282,8 +288,8 @@ extern "C"
   // no content.
   //
   uint8_t * SeparateUtf8(
-            uint8_t       **ppContent,     // Pointer to content to modify
-            const uint8_t *pTokenSet);     // Delimiter(s)
+        uint8_t       **ppContent,     // Pointer to content to modify
+        const uint8_t *pTokenSet);     // Delimiter(s)
 
   // Given a pointer to an ASCII string and a pointer to one or more delimiter 
   // characters, searches the string for the first occurrence of a delimiter. 
@@ -292,8 +298,8 @@ extern "C"
   // string is empty.  DOES NOT HANDLE UTF-8.
   //
   char * SeparateAscii(
-            char       **ppszText,         // Pointer to string to modify
-            const char *pszTokenSet);      // Delimiter(s)
+        char       **ppszText,         // Pointer to string to modify
+        const char *pszTokenSet);      // Delimiter(s)
 
   // Given a pointer to null-terminated UTF-8 content and a pointer to a null- 
   // terminated set of one or more delimiter code points, searches the content 
@@ -304,8 +310,8 @@ extern "C"
   // OTHER THAN NULL CHECKING.
   //
   uint8_t * TokenFindUtf8(
-            const uint8_t *pContent,       // Content to search
-            const uint8_t *pTokenSet);     // Delimiter(s)
+        const uint8_t *pContent,       // Content to search
+        const uint8_t *pTokenSet);     // Delimiter(s)
 
   // Given a pointer to null-terminated UTF-8 content and a pointer to a null- 
   // terminated set of one or more delimiter code points, searches the content 
@@ -316,17 +322,17 @@ extern "C"
   // OTHER THAN NULL CHECKING.
   //
   uint8_t * TokenLenFindUtf8(
-            const uint8_t *pContent,       // Content to search
-            const uint8_t *pTokenSet,      // Delimiter(s)
-            int           lenContent,      // Count of code points in content
-            int           lenTokenSet);    // Code points in token set
+        const uint8_t *pContent,       // Content to search
+        const uint8_t *pTokenSet,      // Delimiter(s)
+        int           lenContent,      // Count of code points in content
+        int           lenTokenSet);    // Code points in token set
 
   // Returns the UTF-8 code point at the given index within the content.
   // THE PERFORMANCE IS TERRIBLE, RELATIVE TO ASCII STRING INDEXING.
   //
   uint32_t IndexUtf8(
-            uint8_t *pContent,             // Content to find
-            int     iIndex);               // Index at which to find it
+        uint8_t *pContent,             // Content to find
+        int     iIndex);               // Index at which to find it
 
   // Removes leading and trailing spaces from null-terminated UTF-8 content, 
   // modifying the content in place.  Returns a pointer to the beginning of 
@@ -335,7 +341,7 @@ extern "C"
   // pointer to it.
   //
   uint8_t * TrimUtf8(
-            uint8_t *pContent);            // Content to trim
+        uint8_t *pContent);            // Content to trim
 
   // Removes leading and trailing spaces from a null-terminated ASCII string, 
   // modifying the string in place.  Returns a pointer to the beginning of the 
@@ -344,7 +350,7 @@ extern "C"
   // to it.
   //
   char * TrimAscii(
-            char *pszText);                // String to trim
+        char *pszText);                // String to trim
 
   // Returns a buffer containing the UTF-8 code points beginning at the given 
   // first index within the null-terminated content and ending at the last 
@@ -364,9 +370,9 @@ extern "C"
   // THE PERFORMANCE IS TERRIBLE, RELATIVE TO ASCII SUBSTRING FUNCTIONALITY.
   //
   uint8_t * SliceUtf8(
-            const uint8_t *pContent,       // Content to slice
-            int           iFirst,          // Index at which slice begins
-            int           iLast);          // Index at which slice ends
+        const uint8_t *pContent,       // Content to slice
+        int           iFirst,          // Index at which slice begins
+        int           iLast);          // Index at which slice ends
 
   // Similar to the above function, but for ASCII text, and much faster.
   //
@@ -374,9 +380,9 @@ extern "C"
   // ASCII text is deallocated via free(), once it is no longer in use.
   //
   char * SliceAscii(
-            const char *pContent,          // String to slice
-            int        iFirst,             // Index at which slice begins
-            int        iLast);             // Index at which slice ends
+        const char *pContent,          // String to slice
+        int        iFirst,             // Index at which slice begins
+        int        iLast);             // Index at which slice ends
 
   // Returns a buffer containing the UTF-8 code points beginning at the given 
   // first index within the content and ending at the last index.  If the last 
@@ -394,10 +400,10 @@ extern "C"
   // THE PERFORMANCE IS TERRIBLE, RELATIVE TO ASCII SUBSTRING FUNCTIONALITY.
   //
   uint8_t * LenSliceUtf8(
-            const uint8_t *pContent,       // Content to slice
-            int           iFirst,          // Index at which slice begins
-            int           iLast,           // Index at which slice ends
-            int           lenContent);     // Code point count (whole content)
+        const uint8_t *pContent,       // Content to slice
+        int           iFirst,          // Index at which slice begins
+        int           iLast,           // Index at which slice ends
+        int           lenContent);     // Code point count (whole content)
 
   // Similar to the above function, but for ASCII text, and much faster.
   //
@@ -405,10 +411,10 @@ extern "C"
   // ASCII text is deallocated via free(), once it is no longer in use.
   //
   char * LenSliceAscii(
-            const char *pContent,          // String to slice
-            int        iFirst,             // Index at which slice begins
-            int        iLast,              // Index at which slice ends
-            int        lenContent);        // Whole string length
+        const char *pContent,          // String to slice
+        int        iFirst,             // Index at which slice begins
+        int        iLast,              // Index at which slice ends
+        int        lenContent);        // Whole string length
 
   // Determines whether null-terminated UTF-8 content matches entirely.
   // Returns true for matching content, and false otherwise.
@@ -419,42 +425,42 @@ extern "C"
   // sorting might best be coded specifically for one locale or another.
   //
   bool CompareUtf8(
-            const uint8_t *pContentA,      // Content to compare...
-            const uint8_t *pContentB);     // ...with other content
+        const uint8_t *pContentA,      // Content to compare...
+        const uint8_t *pContentB);     // ...with other content
 
   // Determines whether null-terminated UTF-8 content matches, entirely, after 
   // case folding.  Returns true for matching content, and false otherwise.
   //
   bool CaseCompareUtf8(
-            const uint8_t *pContentA,      // Content to compare...
-            const uint8_t *pContentB);     // ...with other content
+        const uint8_t *pContentA,      // Content to compare...
+        const uint8_t *pContentB);     // ...with other content
 
   // Determines whether UTF-8 content matches, up to a given number of code 
   // points or any terminating null.  Returns true for matching content, and 
   // false otherwise.
   //
   bool LenCompareUtf8(
-            const uint8_t *pContentA,      // Content to compare...
-            const uint8_t *pContentB,      // ...with other content
-            int           lenContent);     // Code point count
+        const uint8_t *pContentA,      // Content to compare...
+        const uint8_t *pContentB,      // ...with other content
+        int           lenContent);     // Code point count
 
   // Determines whether UTF-8 content matches, up to a given number of code 
   // points or any terminating null, after case folding.  Returns true for 
   // matching content, and false otherwise.
   //
   bool LenCaseCompareUtf8(
-            const uint8_t *pContentA,      // Content to compare...
-            const uint8_t *pContentB,      // ...with other content
-            int           lenContent);     // Code point count
+        const uint8_t *pContentA,      // Content to compare...
+        const uint8_t *pContentB,      // ...with other content
+        int           lenContent);     // Code point count
 
   // Determines whether content matches, up to a specified number of bytes or 
   // any terminating null.  Returns true for matching content, and false 
   // otherwise.
   //
   bool SizeCompareUtf8(
-            const uint8_t *pContentA,      // Content to compare...
-            const uint8_t *pContentB,      // ...with other content
-            size_t        sizeContent);    // Content size (bytes)
+        const uint8_t *pContentA,      // Content to compare...
+        const uint8_t *pContentB,      // ...with other content
+        size_t        sizeContent);    // Content size (bytes)
 
   // Given a pair of byte ranges comprising UTF-8 content, determines whether 
   // the content matches after case folding.  Returns true if the ranges begin 
@@ -464,9 +470,9 @@ extern "C"
   // CHECKING.
   //
   bool SizeCaseCompareUtf8(
-            const uint8_t *pContentA,      // Content to compare...
-            const uint8_t *pContentB,      // ...with other content
-            size_t        sizeContent);    // Content size (bytes)
+        const uint8_t *pContentA,      // Content to compare...
+        const uint8_t *pContentB,      // ...with other content
+        size_t        sizeContent);    // Content size (bytes)
 
   // Given a pointer to UTF-8 content and a pointer to a prospectively 
   // matching portion of content -- i.e., what may be a substring -- returns 
@@ -474,9 +480,9 @@ extern "C"
   // Returns nullptr if no match is found.
   //
   uint8_t * FindUtf8(
-            const uint8_t *pContent,       // Haystack
-            const uint8_t *pSearchContent, // Needle
-            uint8_t       **ppLast);       // Returned loc where match ends
+        const uint8_t *pContent,       // Haystack
+        const uint8_t *pSearchContent, // Needle
+        uint8_t       **ppLast);       // Returned location where match ends
 
   // Given a pointer to UTF-8 content and a pointer to a prospectively 
   // matching portion of content -- i.e., what may be a substring -- and a 
@@ -485,11 +491,11 @@ extern "C"
   // match is found.
   //
   uint8_t * LenFindUtf8(
-            const uint8_t *pContent,       // Haystack
-            const uint8_t *pSearchContent, // Needle 
-            int           lenContent,      // Code point count (haystack)
-            int           lenSlice,        // Code point count (needle)
-            uint8_t       **ppLast);       // Returned loc where match ends
+        const uint8_t *pContent,       // Haystack
+        const uint8_t *pSearchContent, // Needle 
+        int           lenContent,      // Code point count (haystack)
+        int           lenSlice,        // Code point count (needle)
+        uint8_t       **ppLast);       // Returned location where match ends
 
   // Given a pointer to UTF-8 content and a pointer to a prospectively 
   // matching portion of content -- i.e., what may be a substring -- returns 
@@ -497,9 +503,9 @@ extern "C"
   // after case folding.  Returns nullptr if no match is found.
   //
   uint8_t * CaseFindUtf8(
-            const uint8_t *pContent,       // Haystack
-            const uint8_t *pSearchContent, // Needle 
-            uint8_t       **ppLast);       // Returned loc where match ends
+        const uint8_t *pContent,       // Haystack
+        const uint8_t *pSearchContent, // Needle 
+        uint8_t       **ppLast);       // Returned location where match ends
 
   // Given a pointer to UTF-8 content and a pointer to a prospectively 
   // matching portion of content -- i.e., what may be a substring -- and a 
@@ -508,11 +514,11 @@ extern "C"
   // Returns nullptr if no match is found.
   //
   uint8_t * LenCaseFindUtf8(
-            const uint8_t *pContent,       // Haystack
-            const uint8_t *pSearchContent, // Needle 
-            int           lenContent,      // Code point count (haystack)
-            int           lenSlice,        // Code point count (needle)
-            uint8_t       **ppLast);       // Returned loc where match ends
+        const uint8_t *pContent,       // Haystack
+        const uint8_t *pSearchContent, // Needle 
+        int           lenContent,      // Code point count (haystack)
+        int           lenSlice,        // Code point count (needle)
+        uint8_t       **ppLast);       // Returned location where match ends
 
   // Given a pointer to an ASCII string and a pointer to a prospectively 
   // matching portion of text -- i.e., what may be a substring -- and a 
@@ -521,11 +527,11 @@ extern "C"
   // match is found.
   //
   char * LenFindAscii(
-            const char *pszText,           // Haystack
-            const char *pszSearchText,     // Needle 
-            int        lenText,            // Character count (haystack)
-            int        lenSlice,           // Character count (needle)
-            char       **ppLast);          // Returned loc where match ends
+        const char *pszText,           // Haystack
+        const char *pszSearchText,     // Needle 
+        int        lenText,            // Character count (haystack)
+        int        lenSlice,           // Character count (needle)
+        char       **ppLast);          // Returned location where match ends
 
   // Given a pointer to an ASCII string and a pointer to a prospectively 
   // matching portion of text -- i.e., what may be a substring -- returns a 
@@ -533,9 +539,9 @@ extern "C"
   // case folding.  Returns nullptr if no match is found.
   //
   char * CaseFindAscii(
-            const char *pszText,           // Haystack
-            const char *pszSearchText,     // Needle
-            char       **ppLast);          // Returned loc where match ends
+        const char *pszText,           // Haystack
+        const char *pszSearchText,     // Needle
+        char       **ppLast);          // Returned location where match ends
 
   // Given a pointer to an ASCII string and a pointer to a prospectively 
   // matching portion of text -- i.e., what may be a substring -- and a 
@@ -544,11 +550,11 @@ extern "C"
   // Returns nullptr if no match is found.
   //
   char * LenCaseFindAscii(
-            const char *pszText,           // Haystack
-            const char *pszSearchText,     // Needle 
-            int        lenText,            // String length (haystack)
-            int        lenSlice,           // String length (needle)
-            char       **ppLast);          // Returned loc where match ends
+        const char *pszText,           // Haystack
+        const char *pszSearchText,     // Needle 
+        int        lenText,            // String length (haystack)
+        int        lenSlice,           // String length (needle)
+        char       **ppLast);          // Returned location where match ends
 
   // Given a pointer to UTF-8 content and a pointer to a prospectively 
   // matching portion of content -- i.e., what may be a substring -- returns 
@@ -556,8 +562,8 @@ extern "C"
   // Returns -1 if no match is found.
   //
   int IndexFindUtf8(
-            const uint8_t *pContent,        // Haystack
-            const uint8_t *pSearchContent); // Needle
+        const uint8_t *pContent,        // Haystack
+        const uint8_t *pSearchContent); // Needle
 
   // Given a pointer to UTF-8 content and a pointer to a prospectively 
   // matching portion of content -- i.e., what may be a substring -- and a 
@@ -566,10 +572,10 @@ extern "C"
   // found.
   //
   int IndexLenFindUtf8(
-            const uint8_t *pContent,       // Haystack
-            const uint8_t *pSearchContent, // Needle 
-            int           lenContent,      // Code point count (haystack)
-            int           lenSlice);       // Code point count (needle)
+        const uint8_t *pContent,       // Haystack
+        const uint8_t *pSearchContent, // Needle 
+        int           lenContent,      // Code point count (haystack)
+        int           lenSlice);       // Code point count (needle)
 
   // Given a pointer to UTF-8 content and a pointer to a prospectively 
   // matching portion of content -- i.e., what may be a substring -- returns 
@@ -577,8 +583,8 @@ extern "C"
   // after case folding.  Returns -1 if no match is found.
   //
   int IndexCaseFindUtf8(
-            const uint8_t *pContent,        // Haystack
-            const uint8_t *pSearchContent); // Needle
+        const uint8_t *pContent,        // Haystack
+        const uint8_t *pSearchContent); // Needle
 
   // Given a pointer to UTF-8 content and a pointer to a prospectively 
   // matching portion of content -- i.e., what may be a substring -- and a 
@@ -587,10 +593,10 @@ extern "C"
   // Returns -1 if no match is found.
   //
   int IndexLenCaseFindUtf8(
-            const uint8_t *pContent,       // Haystack
-            const uint8_t *pSearchContent, // Needle 
-            int           lenContent,      // Code point count (haystack)
-            int           lenSlice);       // Code point count (needle)
+        const uint8_t *pContent,       // Haystack
+        const uint8_t *pSearchContent, // Needle 
+        int           lenContent,      // Code point count (haystack)
+        int           lenSlice);       // Code point count (needle)
 
   // Given a pointer to an ASCII string and a pointer to a prospectively 
   // matching portion of text -- i.e., what may be a substring -- and a 
@@ -599,10 +605,10 @@ extern "C"
   // is found.
   //
   int IndexLenFindAscii(
-            const char *pszText,           // Haystack
-            const char *pszSearchText,     // Needle 
-            int        lenText,            // Character count (haystack)
-            int        lenSlice);          // Character count (needle)
+        const char *pszText,           // Haystack
+        const char *pszSearchText,     // Needle 
+        int        lenText,            // Character count (haystack)
+        int        lenSlice);          // Character count (needle)
 
   // Given a pointer to an ASCII string and a pointer to a prospectively 
   // matching portion of text -- i.e., what may be a substring -- returns an 
@@ -610,8 +616,8 @@ extern "C"
   // case folding.  Returns -1 if no match is found.
   //
   int IndexCaseFindAscii(
-            const char *pszText,           // Haystack
-            const char *pszSearchText);    // Needle
+        const char *pszText,           // Haystack
+        const char *pszSearchText);    // Needle
 
   // Given a pointer to an ASCII string and a pointer to a prospectively 
   // matching portion of text -- i.e., what may be a substring -- and a 
@@ -620,10 +626,33 @@ extern "C"
   // Returns -1 if no match is found.
   //
   int IndexLenCaseFindAscii(
-            const char *pszText,           // Haystack
-            const char *pszSearchText,     // Needle 
-            int        lenText,            // String length (haystack)
-            int        lenSlice);          // String length (needle)
+        const char *pszText,           // Haystack
+        const char *pszSearchText,     // Needle 
+        int        lenText,            // String length (haystack)
+        int        lenSlice);          // String length (needle)
+
+  // Given a pointer to UTF-8 content and pointers to the beginnng and end of 
+  // a prospectively matching portion of content -- i.e., what may be a 
+  // substring -- returns a pointer to any first matching sequence within the 
+  // larger content.   Returns nullptr if no match is found.
+  //
+  uint8_t * FindSliceUtf8(
+        const uint8_t *pContent,       // Haystack
+        const uint8_t *pPatternBegin,  // Beginning of needle
+        const uint8_t *pPatternEnd,    // End of needle
+        uint8_t       **ppEnd);        // Updated loc after end of match
+
+  // Given a pointer to UTF-8 content and pointers to the beginnng and end of 
+  // a prospectively matching portion of content -- i.e., what may be a 
+  // substring -- returns a pointer to any first matching sequence within the 
+  // larger content, after case folding.   Returns nullptr if no match is 
+  // found.
+  //
+  uint8_t * CaseFindSliceUtf8(
+        const uint8_t *pContent,       // Haystack
+        const uint8_t *pPatternBegin,  // Beginning of needle
+        const uint8_t *pPatternEnd,    // End of needle
+        uint8_t       **ppEnd);        // Updated loc after end of match
 
   // C/C++ implementation of FastWildCompare(), for null-terminated content 
   // comprising UTF-8 code points.
@@ -633,8 +662,8 @@ extern "C"
   // Otherwise compares the content a code point at a time. 
   //
   bool WildCompareUtf8(
-            const uint8_t *pWild,          // Content (may include wildcards)
-            const uint8_t *pTame);         // Content to compare (no wildcards)
+        const uint8_t *pWild,          // Content (may include wildcards)
+        const uint8_t *pTame);         // Content to compare (no wildcards)
 
   // C/C++ implementation of FastWildCompare(), for content comprising UTF-8 
   // code points.
@@ -645,10 +674,10 @@ extern "C"
   // content a code point at a time. 
   //
   bool WildLenCompareUtf8(
-            const uint8_t *pWild,          // Content (may include wildcards)
-            const uint8_t *pTame,          // Content to compare (no wildcards)
-            int           lenWild,         // Count of code points in content
-            int           lenTame);        // Code points in prospective match
+        const uint8_t *pWild,          // Content (may include wildcards)
+        const uint8_t *pTame,          // Content to compare (no wildcards)
+        int           lenWild,         // Count of code points in content
+        int           lenTame);        // Code points in prospective match
 
   // C/C++ implementation of FastWildCompare(), for null-terminated content 
   // comprising UTF-8 code points.
@@ -659,8 +688,8 @@ extern "C"
   // point at a time. 
   //
   bool WildCaseCompareUtf8(
-            const uint8_t *pWild,          // Content (may include wildcards)
-            const uint8_t *pTame);         // Content to compare (no wildcards)
+        const uint8_t *pWild,          // Content (may include wildcards)
+        const uint8_t *pTame);         // Content to compare (no wildcards)
 
   // C/C++ implementation of FastWildCompare(), for content comprising UTF-8 
   // code points.
@@ -671,10 +700,10 @@ extern "C"
   // folds and compares the content a code point at a time. 
   //
   bool WildLenCaseCompareUtf8(
-            const uint8_t *pWild,          // Content (may include wildcards)
-            const uint8_t *pTame,          // Content to compare (no wildcards)
-            int           lenWild,         // Count of code points in content
-            int           lenTame);        // Code points in prospective match
+        const uint8_t *pWild,          // Content (may include wildcards)
+        const uint8_t *pTame,          // Content to compare (no wildcards)
+        int           lenWild,         // Count of code points in content
+        int           lenTame);        // Code points in prospective match
 
   // Targeted wildcard search.
   //
@@ -686,9 +715,9 @@ extern "C"
   // *ppFirst will point to the location within the content where the 
   //  overall match begins,
   // *ppLast will point to the location where the overall match ends, and
-  // *ppTarget will point to the location where the last where the last match 
-  // on a '*' wildcard begins, i.e., the content corresponding to the last '*' 
-  // wildcard in the search pattern.
+  // *ppTarget will point to the location where the last match on a '*' 
+  // wildcard begins, i.e., the content corresponding to the last '*' wildcard 
+  // in the search pattern.
   //
   // ...and returns a to pointer to the location where the first '*' wildcard 
   // match begins, i.e., the content corresponding to the first '*' wildcard.
@@ -696,32 +725,32 @@ extern "C"
   // sets *ppFirst, *ppLast, and *ppTarget to nullptr and returns nullptr.
   //
   uint8_t * WildFindUtf8(
-       uint8_t       **ppFirst,       // Updated location of content to search
-       const uint8_t *pSearchPattern, // Specifier that may include wildcards
-       uint8_t       **ppLast,        // Returned location where match ends
-       uint8_t       **ppTarget);     // Returned location after last '*'
+        uint8_t       **ppFirst,       // Updated location of content to search
+        const uint8_t *pSearchPattern, // Specifier that may include wildcards
+        uint8_t       **ppLast,        // Returned location where match ends
+        uint8_t       **ppTarget);     // Returned location after last '*'
 
   // Targeted wildcard search (length limited).
   // See comments for WildFindUtf8().  The caller provides length limits for 
   // the content and for the search pattern via the two integer parameters.
   //
   uint8_t * WildLenFindUtf8(
-       uint8_t       **ppFirst,       // Updated location of content to search
-       const uint8_t *pSearchPattern, // Specifier that may include wildcards
-       int           lenContent,      // Count of code points in content
-       int           lenPattern,      // Code points in search pattern
-       uint8_t       **ppLast,        // Returned location where match ends
-       uint8_t       **ppTarget);     // Returned location after last '*'
+        uint8_t       **ppFirst,       // Updated location of content to search
+        const uint8_t *pSearchPattern, // Specifier that may include wildcards
+        int           lenContent,      // Count of code points in content
+        int           lenPattern,      // Code points in search pattern
+        uint8_t       **ppLast,        // Returned location where match ends
+        uint8_t       **ppTarget);     // Returned location after last '*'
 
   // Targeted wildcard search (case-insensitive).
   // See comments for WildFindUtf8().  The wildcarded content comparison is 
   // performed with case folding, for a case-insensitive match.
   //
   uint8_t * WildCaseFindUtf8(
-       uint8_t       **ppFirst,       // Updated location of content to search
-       const uint8_t *pSearchPattern, // Specifier that may include wildcards
-       uint8_t       **ppLast,        // Returned location where match ends
-       uint8_t       **ppTarget);     // Returned location after last '*'
+        uint8_t       **ppFirst,       // Updated location of content to search
+        const uint8_t *pSearchPattern, // Specifier that may include wildcards
+        uint8_t       **ppLast,        // Returned location where match ends
+        uint8_t       **ppTarget);     // Returned location after last '*'
 
   // Targeted wildcard search (length limited and case-insensitive).
   // See comments for WildFindUtf8().  The caller provides length limits for 
@@ -729,25 +758,218 @@ extern "C"
   // The comparison is performed with case folding, for a case-insensitive match.
   //
   uint8_t * WildLenCaseFindUtf8(
-       uint8_t       **ppFirst,       // Updated location of content to search
-       const uint8_t *pSearchPattern, // Specifier that may include wildcards
-       int           lenContent,      // Count of code points in content
-       int           lenPattern,      // Code points in search pattern
-       uint8_t       **ppLast,        // Returned location where match ends
-       uint8_t       **ppTarget);     // Returned location after last '*'
-#if defined(__cplusplus)
+        uint8_t       **ppFirst,       // Updated location of content to search
+        const uint8_t *pSearchPattern, // Specifier that may include wildcards
+        int           lenContent,      // Count of code points in content
+        int           lenPattern,      // Code points in search pattern
+        uint8_t       **ppLast,        // Returned location where match ends
+        uint8_t       **ppTarget);     // Returned location after last '*'
+
+  // Targeted wildcard search for slice of pattern.
+  // Given a pointer to UTF-8 content and pointers to the first and last code 
+  // points of a search pattern that contains at least one '*' wildcard and 
+  // that can include '?' wildcards, returns a pointer to any first match. 
+  // Returns nullptr if no match is found.
+  //
+  uint8_t * WildFindSliceUtf8(
+        uint8_t       **ppBegin,       // Updated location of content to search
+        const uint8_t *pPatternBegin,  // Specifier that may include wildcards
+        const uint8_t *pPatternEnd,    // End of specifier
+        uint8_t       **ppEnd,         // Updated location after end of match
+        uint8_t       **ppTarget);     // Returned location after last '*'
+
+  // Targeted wildcard search for slice of pattern (case-insensitive).
+  // See comments for WildFindSliceUtf8().  The wildcarded content comparison 
+  // is performed with case folding, for a case-insensitive match.
+  //
+  uint8_t * WildCaseFindSliceUtf8(
+        uint8_t       **ppBegin,       // Updated location of content to search
+        const uint8_t *pPatternBegin,  // Specifier that may include wildcards
+        const uint8_t *pPatternEnd,    // End of specifier
+        uint8_t       **ppEnd,         // Updated location after end of match
+        uint8_t       **ppTarget);     // Returned location after last '*'
 }   // extern "C"
 
-
-//  A FastUtf8::Uniseries class instantiated per UTF-8 content sequence
+#if defined(__cplusplus)
+namespace FastUtf8
+{
+//  The following classes live in the FastUtf8 namespace:
+//   - A FastUtf8::Uniseries class instantiated per UTF-8 content sequence
 //     A content sequence can contain up to 4GB of code points and may 
 //     represent, e.g., an ASCII string, a Devanāgarī shirorekha, an emoji 
 //     combo, a Hangul Mundan, an Urdu bayt, etc.
-//  A FastUtf8::Initializer class instantiated once per session, and 
-//  A FastUtf8::Uniseries::Iterator class for walking through content
+//   - A FastUtf8::Initializer class instantiated once per session, and 
+//   - A FastUtf8::Uniseries::Iterator class for walking through content
 //
-namespace FastUtf8
-{
+// The namespace includes the following functions, values, and data 
+// structures used with hierarchical content and with targeted wildcard 
+// search.
+
+   //
+   // Data, data structures, and methods for working with hierarchical content 
+   // selection via wildcards and with vectorized wildcard search.
+   //
+
+   // If the following value is true, the Wild[Case]Select functions seek a 
+   // complete match on the inbound search pattern.  Otherwise, these 
+   // functions stop seeking a match after the last '*' wildcard in the 
+   // pattern and return any result of vectorized wildcard search on the 
+   // portion of the pattern corresponding to the specified nesting level.
+   // Setting this value to false may be useful for finding matches within 
+   // incomplete or streaming data sets.
+   constexpr bool g_bMatchAllTails = true;
+
+   // Number of vectors that may be returned via a call to either of the 
+   // Wild[Case]Select() family of functions.
+   constexpr std::size_t MAX_VECTORS = 0x1F;
+
+   // Maximum nesting leval, within hierarchical content, that may be 
+   // traversed within any of the Wild[Case]Vectorize() or 
+   // Wild[Case]Select() functions.
+   constexpr std::size_t MAX_LEVEL = 0x07;
+
+   // Number of matches on '*' wildcards that may be stored in a std::array 
+   // returned via Wild[Case]Vectorize() or Wild[Case]Select().
+   constexpr std::size_t MAX_MATCHES = 0x0F;
+
+   // Maximum code point length.
+   constexpr std::size_t MAX_CODEPOINT = 0x04; 
+
+   // The WildTarget structure represents an individual '*' wildcard match 
+   // within vectorized wildcard search results.
+   struct WildTarget {
+       uint8_t *pBegin;   // Pointer to first code point in a match on a '*'
+       uint8_t *pEnd;     // Pointer to code point immediately after the match
+   };
+
+   // A MatchVector object contains matches corresponding to a single search 
+   // on a pattern containing '*' wildcards.
+   struct MatchVector {
+      std::array<WildTarget, MAX_MATCHES> matches;
+      std::size_t vectorSize;
+   };
+
+   // Lexicographical comparator for ordering a set of vectors of '*' matches.
+   struct MatchComparator
+   {
+      std::size_t targetOffset;  // "Order by" parameter.
+
+      MatchComparator(std::size_t offset) noexcept;  // Sets targetOffset.
+
+      // This byte-by-byte comparator for individual code points is not locale-
+      // specific.
+      bool compareContent(
+            const uint8_t *pContentA, 
+            const uint8_t *pContentB) const noexcept;
+
+      // This comparator determines whether two content ranges match.
+      bool isContentIdentical(
+            const uint8_t *pContentA, 
+            const uint8_t *pContentB) const noexcept;
+
+      bool operator() (
+            const MatchVector& vectorA, 
+            const MatchVector& vectorB) const noexcept;
+   };
+
+   // A ResultSet object contains vectorized wildcard search results.
+   using ResultSet = std::set<MatchVector, MatchComparator>;
+
+   //
+   // Vectorized wildcard search.
+   //
+   // The Wild[Case]Vectorize() family of functions is based on the 
+   // Wild[Len][Case]FindUtf8() functions for targeted wildcard search.  Instead 
+   // of providing locations of matches on just the beginning and ending '*' 
+   // wildcards within a given search pattern, each of these functions populates 
+   // a vector, based on std::array, of pairs of locations -- one pair 
+   // corresponding to the beginning and ending of each match on a '*' wildcard.
+   // Throughout processing, state is maintained so as to match those 
+   // locations in the content relative to the ordering of the '*' wildcards in 
+   // the search pattern.
+   //
+
+   // Given UTF-8 content and a wildcard-containing UTF-8 search pattern, 
+   // searches the content for a match.  If a match is found, sets *ppBegin and 
+   // *ppEnd, and populates pTargets, as follows...
+   //
+   // *ppBegin will point to the location within the content where the overall 
+   //   match begins,
+   // *ppEnd will point to the location immediately after the overall match 
+   //   ends, and
+   // pTargets will point to a container of target match results, based on 
+   //  std::array, where each target comprises a pBegin pointer to first code 
+   //  point of of a portion of the content that matches a '*' wildcard, and a 
+   //  pEnd pointer to the code point immediately after that match
+   //
+   // ...and returns a to pointer to the location where the first '*' wildcard 
+   // match begins, i.e., the content corresponding to the first '*' wildcard.
+   // If no match is found, or if the search pattern contains no '*' wildcard, 
+   // sets *ppBegin, *ppEnd, and the first WildTarget pair to nullptr and 
+   // returns nullptr.
+   //
+   uint8_t * WildVectorize(
+     uint8_t       **ppBegin,        // Updated location of content to search
+     uint8_t       **ppEnd,          // Updated location where search ends
+     const uint8_t *pPatternBegin,   // Specifier that includes wildcards
+     const uint8_t *pPatternEnd,     // End of specifier
+     MatchVector&  pTargets);        // Populated matches
+
+   // Vectorized wildcard search (case-insensitive).
+   // See comments for WildVectorize().  Content comparison is performed with 
+   // case folding.
+   //
+   uint8_t * WildCaseVectorize(
+     uint8_t       **ppBegin,        // Updated location of content to search
+     uint8_t       **ppEnd,          // Updated location where search ends
+     const uint8_t *pPatternBegin,   // Specifier that includes wildcards
+     const uint8_t *pPatternEnd,     // End of specifier
+     MatchVector&  pTargets);        // Populated matches
+
+   // Functions for hierarchical content selection via wildcards.
+   //
+   // Given hierarchical semistructured content in UTF-8 format and a wildcard- 
+   // containing UTF-8 search pattern, traverses the hierarchy based on outer 
+   // '*' wildcards to populate a set of matches, if any, on the inner '*' 
+   // wildcards remaining within the pattern.
+   //
+   // If one or more matches is found, populates pResultSet with beginning and 
+   // ending locations of all matches on '*' wildcards at the center of the 
+   // pattern, where the outer '*' wildcards have been applied to select nested 
+   // content to match, to a nesting level specified by the iLevel parameter.  
+   // The result set is ordered by matches on the '*' wildcard whose position, 
+   // among all of the '*' wildcards in the pattern, is specified by the 
+   // argumement to the FastUtf8::MatchComparator functor associated with 
+   // pResultSet.  Returns a pointer to the first match on the overall pattern, 
+   // i.e. to the beginning of the hierarchy corresponding to the pattern.
+   //
+   // If no match is found, or if there are insufficient outer '*' wildcards at 
+   // each end of the pattern to accommodate the specified iLevel value, leaves 
+   // *pResultSet initialized to nulls and returns nullptr.  If iLevel > 
+   // MAX_LEVEL, behaves as though iLevel == MAX_LEVEL.
+   //
+   uint8_t * WildSelect(
+     const uint8_t *pBegin,        // Location of content to search
+     uint8_t       **ppEnd,        // Updated ending location of search
+     const uint8_t *pFullPattern,  // Specifier that includes wildcards
+     int           iLevel,         // Count of nested outer '*' wildcards
+     ResultSet *pResultSet);       // Set of vectors of matches for each '*'
+
+   // Hierarchical content selection (case-insensitive).
+   // See comments for WildSelect().  Content comparison is performed with 
+   // case folding.
+   //
+   uint8_t * WildCaseSelect(
+     const uint8_t *pBegin,        // Location of content to search
+     uint8_t       **ppEnd,        // Updated ending location of search
+     const uint8_t *pFullPattern,  // Specifier that includes wildcards
+     int           iLevel,         // Count of nested outer '*' wildcards
+     ResultSet *pResultSet);       // Set of vectors of matches for each '*'
+  
+//
+// FastUtf8::Uniseries instance data default values with set and clear methods.
+//
+
    // These flags affect the default behavior of Uniseries objects.  By 
    // default, these objects are constructed such that operator= will perform 
    // a case-sensitive comparison and so that every routine that walks through 
@@ -895,8 +1117,12 @@ public:
    // The C-style memory management is compatible with the underlying C-style 
    // functions, which rely on the standard C library.
    //
-   Uniseries(uint8_t *pInbound, bool bWrapBuffer = false);
-   Uniseries(char *pInbound, bool bWrapBuffer = false);
+   Uniseries(const uint8_t *pInbound, 
+      bool bWrapBuffer = false, 
+      bool bDeallocOnDestruct = true);
+   Uniseries(const char *pInbound, 
+      bool bWrapBuffer = false, 
+      bool bDeallocOnDestruct = true);
 
    // This standard constructor creates an empty FastUtf8 object with a 
    // content buffer capacity specified in bytes.  The metadata has no flags 
@@ -1121,7 +1347,7 @@ public:
    static int getLength(const Uniseries& that) noexcept;
 
    // This getSize() method returns the content's size in bytes.
-   size_t getSize(void) noexcept;
+   size_t getSize(void) const noexcept;
 
    // These getSize() implementations return the size of the inbound content, 
    // in bytes.
@@ -1223,6 +1449,35 @@ public:
       const uint8_t *pFirst = nullptr,    // Beginning location
       uint8_t **ppLast = nullptr) const;  // Returned location where match ends
 
+   // Each of these pFindSlice() methods returns a pointer to the inbound 
+   // slice within the "this" object's content, or nullptr in case that slice 
+   // is not found.  The slice content comprises the bytes between the 
+   // locations indicated by pPatternBegin and pPatternEnd.  The optional 
+   // pBegin parameter refers to a location, in "this", to begin seeking a 
+   // match.   The method updates the optional ppEnd location to provide the 
+   // limit of any first matching content within "this".  Ignores the 
+   // IS_LENGTH_LIMITED flag.
+   uint8_t * pFindSlice(
+      const uint8_t *pPatternBegin,       // Start of needle
+      const uint8_t *pPatternEnd,         // End of needle
+      const uint8_t *pBegin = nullptr,    // Beginning location
+      uint8_t **ppEnd = nullptr) const;   // Updated loc after end of match
+   uint8_t * pFindSlice(
+      const uint8_t *pPatternBegin, 
+      const uint8_t *pPatternEnd,  
+      const char    *pBegin = nullptr, 
+      uint8_t **ppEnd = nullptr) const;
+
+   // This pFindSlice() method returns a pointer to any first match on 
+   // sPattern or between the locations indicated by the optional pBegin and 
+   // ppEnd parameters.  If those parameters are null, returns a pointer to 
+   // any first match on sPattern within "this".  Returns nullptr in case the 
+   // slice is not found.  Ignores the IS_LENGTH_LIMITED flag.
+   uint8_t * FastUtf8::Uniseries::pFindSlice(
+      const FastUtf8::Uniseries& sPattern,    // Object containing needle
+      const uint8_t *pBegin = nullptr,        // Beginning location
+      uint8_t       **ppEnd = nullptr) const; // Updated loc after end of match
+
    // This caseContains() case-insensitive partial content comparison method 
    // returns true if the inbound content is contained within  the "this" 
    // object's content, or false if the inbound content is not found.  
@@ -1273,6 +1528,34 @@ public:
       const uint8_t *pFirst = nullptr,    // Beginning location
       uint8_t **ppLast = nullptr) const;  // Returned location where match ends
 
+   // The casepFindSlice() case-insensitive partial content comparison method 
+   // returns a pointer to any first occurrence of the inbound slice within 
+   // "this" object's content, or nullptr in case the inbound slice is not 
+   // found.  It disregards the IS_CASE_INSENSITIVE flag.  The slice content 
+   // comprises the bytes between the locations indicated by pPatternBegin and 
+   // pPatternEnd.
+   uint8_t * casepFindSlice(
+      const uint8_t *pPatternBegin,       // Start of needle
+      const uint8_t *pPatternEnd,         // End of needle
+      const uint8_t *pBegin = nullptr,    // Beginning location
+      uint8_t **ppEnd = nullptr) const;  // Updated location where match ends
+   uint8_t * casepFindSlice(
+      const uint8_t *pPatternBegin,       // Start of needle
+      const uint8_t *pPatternEnd,         // End of needle
+      const char    *pBegin = nullptr,    // Beginning location
+      uint8_t **ppEnd = nullptr) const;   // Updated location where match ends
+
+   // This casepFindSlice() case-insensitive method returns a pointer to any 
+   // first match on sPattern as a whole or between the locations indicated by 
+   // the optional pBegin and ppEnd parameters.  If those parameters are 
+   // nullptr, returns a pointer to any first match within "this".  Returns 
+   // nullptr in case the slice is not found.  Ignores the IS_LENGTH_LIMITED 
+   // and IS_CASE_SENSITIVE flags.
+   uint8_t * FastUtf8::Uniseries::casepFindSlice(
+      const FastUtf8::Uniseries& sPattern,    // Object containing needle
+      const uint8_t *pBegin = nullptr,        // Beginning location
+      uint8_t       **ppEnd = nullptr) const; // Updated loc after end of match
+
    // The wildCompare() method provides for wildcard-based content comparison. 
    // The "this" content is the content that may include the '*' or '?' 
    // wildcards.
@@ -1303,18 +1586,20 @@ public:
    bool caseCompareWild(const char *pWild) const noexcept;
    bool caseCompareWild(const FastUtf8::Uniseries& wild) const noexcept;
 
-   // The pFindWild() partial content comparison method scans the "this" 
+   // To perform a targeted search that returns pointers to content matching 
+   // the first and last wildcards in an inbound search pattern, the 
+   // ::pFindWild() partial content comparison method scans the "this" 
    // content for a first match on the inbound search pattern, which is 
    // expected to contain wildcards, and returns a pointer to the location
-   // within the the content corresponding to any first matching ‘*’ wildcard.
+   // within the the content corresponding to any first matching '*' wildcard.
    // The optional parameters are updated or returned match results.  For 
-   // example, given this content and input:
+   // example, given this content and input...
    //
    // content: "This part is skipped, but here is some content to be matched."
    // ppFirst:                           "here is some content to be matched." 
    // ppWild:   "some*to*match"                   (location provided by caller)
    //
-   // That is, if the caller points ppFirst to "here is some content to be 
+   // ...that is, if the caller points *ppFirst to "here is some content to be 
    // matched" and provides addresses for ppLast and ppTarget, the method will 
    // provide pointers to matching locations within the content, this way:
    // 
@@ -1329,9 +1614,9 @@ public:
    // programmatically distinguishable piece of writing that has a particular 
    // word or phrase in it, in some cases via just one call.  Additional calls, 
    // as needed for example to compare a target to an item in a list, can 
-   // include applying the slice() method to construct a Uniseries with 
-   // *ppTarget and *ppLast as the slice() parameters, then applying one of 
-   // the Uniseries compare methods.
+   // include applying the ::slice() method to construct a Uniseries with 
+   // *ppTarget and *ppLast as the ::slice() parameters, then applying one of 
+   // the Uniseries comparison methods.
    //
    // If no match is found, or if there is no first wildcard, sets *ppFirst, 
    // *ppLast, and *ppTarget to nullptr and returns nullptr.
@@ -1343,7 +1628,7 @@ public:
       uint8_t       **ppTarget = nullptr)   // Returned loc after last '*'
          const noexcept;
    uint8_t * pFindWild(
-      const char *pWild, 
+      const char    *pWild, 
       uint8_t       **ppFirst = nullptr, 
       uint8_t       **ppLast = nullptr, 
       uint8_t       **ppTarget = nullptr) const noexcept;
@@ -1353,8 +1638,8 @@ public:
       uint8_t       **ppLast = nullptr, 
       uint8_t       **ppTarget = nullptr) const noexcept;
 
-   // Case-insensitive implementation of the pFindWild() partial content 
-   // comparison method.
+   // Case-insensitive variants of the pFindWild() partial content comparison 
+   // method for targeted wildcard search.
    uint8_t * casepFindWild(
       const uint8_t *pWild,                 // Search pattern (with wildcards)
       uint8_t       **ppFirst = nullptr,    // Updated beginning location
@@ -1371,6 +1656,251 @@ public:
       uint8_t       **ppFirst = nullptr, 
       uint8_t       **ppLast = nullptr, 
       uint8_t       **ppTarget = nullptr) const noexcept;
+
+   // The ::pFindWildSlice() partial content comparison method scans the 
+   // "this" content for the inbound slice, which is expected to contain at 
+   // least one '*' wildcard and which also may include '?' wildcards.  See 
+   // the comments for the ::pFindWild() method for targeted wildcard search. 
+   // The slice content comprises the bytes between the locations indicated 
+   // by pPatternBegin and pPatternEnd.
+   uint8_t * pFindWildSlice(
+      const uint8_t *pPatternBegin,         // Specifier (with wildcards)
+      const uint8_t *pPatternEnd,           // End of specifier
+      uint8_t       **ppBegin = nullptr,    // Updated beginning location
+      uint8_t       **ppEnd = nullptr,      // Updated loc where match ends
+      uint8_t       **ppTarget = nullptr)   // Returned loc after last '*'
+         const noexcept;
+   uint8_t * pFindWildSlice(
+      const char *pPatternBegin, 
+      const char *pPatternEnd, 
+      uint8_t    **ppBegin = nullptr, 
+      uint8_t    **ppEnd = nullptr, 
+      uint8_t    **ppTarget = nullptr) const noexcept;
+   uint8_t * pFindWildSlice(
+      const Uniseries& sPattern, 
+      uint8_t    **ppBegin = nullptr, 
+      uint8_t    **ppEnd = nullptr, 
+      uint8_t    **ppTarget = nullptr) const noexcept;
+
+   // Case-insensitive implementation of the ::pFindWildSlice() partial 
+   // content comparison method for targeted wildcard search.
+   uint8_t * casepFindWildSlice(
+      const uint8_t *pPatternBegin,         // Specifier (with wildcards)
+      const uint8_t *pPatternEnd,           // End of specifier
+      uint8_t       **ppBegin = nullptr,    // Updated beginning location
+      uint8_t       **ppEnd = nullptr,      // Updated loc where match ends
+      uint8_t       **ppTarget = nullptr)   // Returned loc after last '*'
+         const noexcept;
+   uint8_t * casepFindWildSlice(
+      const char *pPatternBegin, 
+      const char *pPatternEnd, 
+      uint8_t    **ppBegin = nullptr, 
+      uint8_t    **ppEnd = nullptr, 
+      uint8_t    **ppTarget = nullptr) const noexcept;
+   uint8_t * casepFindWildSlice(
+      const Uniseries& sPattern, 
+      uint8_t    **ppBegin = nullptr, 
+      uint8_t    **ppEnd = nullptr, 
+      uint8_t    **ppTarget = nullptr) const noexcept;
+
+   // The ::pVectorizeWild() method performs a targeted wildcard search whose 
+   // purpose is to fetch pointers corresponding to every '*' wildcard in the 
+   // inbound search pattern, which also can contain '?' wildcards.  The 
+   // method scans the "this" content for a first match on the overall pattern 
+   // and populates a MatchVector of WildTarget entries: that is, a container 
+   // of target match results, based on std::array, that resides on the 
+   // stack.  Each WildTarget comprises a pointer to first code point of a 
+   // portion of the content that matches a '*' wildcard, and a pointer to the 
+   // code point immediately after that match.  For example, given this 
+   // content and input...
+   //
+   // content: "This part is skipped, but here is some content to be matched."
+   // *ppBegin:                          "here is some content to be matched." 
+   // pPattern: "some*to*match"                            (provided by caller)
+   //
+   // ...that is, if the caller points *ppBegin to "here is some content to be 
+   // matched", the method will provide pointers to matching locations within 
+   // the content, this way:
+   // 
+   // return value:            " content to be matched."  (match on first '*')
+   // *ppBegin:            "some content to be matched."  (overall match)
+   // *ppEnd:                                      "ed."  (after overall match)
+   // pTargets:  (MatchVector containing of pairs of pointers)
+   //   pTargets[0].pBegin:    " content to be matched."
+   //   pTargets[0].pEnd                "to be matched."
+   //   pTargets[1].pBegin:               " be matched."
+   //   pTargets[1].pEnd:                     "matched."
+   //
+   // If no match is found, or if the pattern includes no '*' wildcard, sets 
+   // *ppBegin and *ppEnd to nullptr and returns nullptr.
+   //
+   uint8_t * pVectorizeWild(
+      MatchVector&   pTargets,               // Vector of matches for each '*'
+      const uint8_t  *pPattern,              // Search pattern (with wildcards)
+      const uint8_t  *pPatternEnd = nullptr, // Loc after search pattern ends
+      uint8_t        **ppBegin = nullptr,    // Updated beginning location
+      uint8_t        **ppEnd = nullptr)      // Returned loc after match ends
+         const noexcept;
+   uint8_t * pVectorizeWild(
+      MatchVector&   pTargets, 
+      const char     *Pattern, 
+      const char     *PatternEnd = nullptr, 
+      uint8_t        **ppBegin = nullptr, 
+      uint8_t        **ppEnd = nullptr) const noexcept;
+   uint8_t * pVectorizeWild(
+      MatchVector&     pTargets, 
+      const Uniseries& sPattern, 
+      uint8_t          **ppBegin = nullptr, 
+      uint8_t          **ppEnd = nullptr) const noexcept;
+
+   // Case-insensitive variants of the pVectorizeWild() method for targeted 
+   // wildcard search.
+   uint8_t * casepVectorizeWild(
+      MatchVector&   pTargets,               // Vector of matches for each '*'
+      const uint8_t  *Pattern,               // Search pattern (with wildcards)
+      const uint8_t  *PatternEnd = nullptr,  // End of search pattern
+      uint8_t        **ppBegin = nullptr,    // Updated beginning location
+      uint8_t        **ppEnd = nullptr)      // Returned loc after match ends
+         const noexcept;
+   uint8_t * casepVectorizeWild(
+      MatchVector&   pTargets, 
+      const char     *Pattern, 
+      const char     *PatternEnd = nullptr, 
+      uint8_t        **ppBegin = nullptr, 
+      uint8_t        **ppEnd = nullptr) const noexcept;
+   uint8_t * casepVectorizeWild(
+      MatchVector&     pTargets, 
+      const Uniseries& sPattern, 
+      uint8_t          **ppBegin = nullptr, 
+      uint8_t          **ppEnd = nullptr) const noexcept;
+
+   // The ::pSelectWild() method searches hierarchical semistructured data, 
+   // such as JSON or XML, first for nested entries corresponding to leading 
+   // and trailing '*' wildcards within the pattern, then (once a caller-
+   // specified nesting level is reached) for a set of targets that match any 
+   // remaining '*' wildcards in the middle of the pattern, which also can 
+   // contain '?' wildcards.
+   //
+   // The method populates a std::set of vector-style containers corresponding 
+   // to a nesting hierarchy that fits a pattern that contains wildcards.  The 
+   // wildcards behave in their usual way, except that in addition to ordinary
+   // wildcard matching, the method keeps track of hierarchical positioning 
+   // within a schema, until it reaches a nesting level specified via the 
+   // iLevel parameter.  To do so, the method processes outer levels of '*' 
+   // wildcards as follows:
+   //
+   // If iLevel is 1 or more, then beginning at the location specified by the 
+   // pBegin pointer, if one is specified, the method scans the "this" content 
+   // for a match on the portion of the pattern prior to the zeroth '*'.  If a 
+   // match is found, the method scans the remaining content for a match on 
+   // the portion of the pattern after the last '*'.
+   //
+   // If iLevel is 2 or more, the method rescans the content for one or more 
+   // matches on the portion of the pattern between the zeroth '*' and the 
+   // next '*'.  For each of those matches, the method scans the remaining 
+   // content for a match on the portion of the pattern after the next-to-last 
+   // '*' and the last '*', stopping when it reaches the portion that has 
+   // matched the last '*'.
+   //
+   // For further nesting levels, the method again scans the content between 
+   // prior findings, for each nested match on '*' wildcards positioned 
+   // subsequently from the beginning and ending of the pattern.  The method 
+   // traverses the hierarchy via a depth-first search..  For example, if the 
+   // method finds a match at level 2, it checks for further matches at level 
+   // 2 before seeking a next match at level 1.
+   //
+   // Once the method reaches the nesting level specified by the iLevel value, 
+   // for each overall match, it populates the inbound vector set with 
+   // pointers to targets within the content matching the search pattern's 
+   // remaining inner '*' wildcards.
+   //
+   // Example: If the caller has 5 wildcards to match within content nested 
+   //    1 level deep, then just an additional 0th and 1st outermost wildcards 
+   //    designate the selection to match...
+   //
+   // content:  "<users><user><name>Freddie</name><id>222</id></user></users>"
+   // pBegin:   "<users>*<user>*<name>Fred*</name>*<id>*</id>*</user>*</users>"
+   // iLevel:   1   (disclude outermost wildcards while matching inner content)
+   // pResultSet:   (set of vectorized targets, accessed via code such as...)
+   //
+   //    for (const FastUtf8::MatchVector& mVector : pResultSet)
+   //    {
+   //       // ... access the matches for any selected '*' wildcard(s) here ...
+   //    }
+   //
+   //    ...and within that loop, the results are these:
+   //
+   //        mVector.matches[0].pBegin: "ie</name><id>222</id></user></users>"
+   //        mVector.matches[0].pEnd:     "</name><id>222</id></user></users>"
+   //        mVector.matches[1].pBegin:          "<id>222</id></user></users>"
+   //        mVector.matches[1].pEnd:            "<id>222</id></user></users>"
+   //        mVector.matches[2].pBegin:              "222</id></user></users>"
+   //        mVector.matches[2].pEnd:                   "</id></user></users>"
+   //
+   //                 Creating a slice between mVector.matches[2].pBegin and 
+   //                 mVector.matches[2].pEnd allows the caller to find the ID 
+   //                 of any user whose name starts with "Fred".
+   //
+   // If the above example were to include more than one line of XML content 
+   // similar to the single line shown, then a short piece of code could find 
+   // the IDs for multiple users whose names begin with "Fred", via a single 
+   // call to ::pSelectWild().  After that call, the code could iterate over 
+   // the result set creating slices for each of the mVector.matches[2].pBegin 
+   // and mVector.matches[2].pEnd pointers in the set.  Further Uniseries 
+   // methods could then be applied to any of the slices.
+   //
+   // The method returns a pointer to the overall match, i.e. to the 
+   // beginning of the hierarchy corresponding to the overall search pattern.
+   // The result set is ordered by matches on the ‘*’ wildcard whose position, 
+   // among the ‘*’ wildcards in the inner portion of the search pattern, is 
+   // specified via the MatchComparator functor associated with pResultSet.
+   //
+   // In case the method finds no match, or in case there are insufficient 
+   // outer '*' wildcards at each end of the pattern to accommodate the 
+   // specified iLevel value, the method leaves *pResultSet initialized to 
+   // nulls and returns nullptr.  In case iLevel > MAX_LEVEL, the method 
+   // behaves as though iLevel == MAX_LEVEL.
+   //
+   uint8_t * pSelectWild(
+      ResultSet     *pResultSet,  // Set of vectors of matches for each '*'
+      const uint8_t *Pattern,     // Search pattern (with wildcards)
+      int           iLevel,       // Count of nested outer '*' wildcards
+      const uint8_t *pBegin,      // Location, in content, to begin search
+      uint8_t **ppEnd = nullptr)  // Updated location after search ends
+         const noexcept;
+   uint8_t * pSelectWild(
+      ResultSet *pResultSet, 
+      const char    *Pattern, 
+      int           iLevel,
+      const uint8_t *pBegin, 
+      uint8_t       **ppEnd = nullptr) const noexcept;
+   uint8_t * pSelectWild(
+      ResultSet        *pResultSet, 
+      const Uniseries& sPattern, 
+      int              iLevel,
+      const uint8_t    *pBegin, 
+      uint8_t          **ppEnd = nullptr) const noexcept;
+   
+   // Case-insensitive variants of the pSelectWild() method for hierarchical 
+   // targeted wildcard search.
+   uint8_t * casepSelectWild(
+      ResultSet *pResultSet, 
+      const uint8_t *Pattern, 
+      int           iLevel,
+      const uint8_t *pBegin, 
+      uint8_t **ppEnd = nullptr) const noexcept;
+   uint8_t * casepSelectWild(
+      ResultSet *pResultSet, 
+      const char    *Pattern, 
+      int           iLevel,
+      const uint8_t *pBegin, 
+      uint8_t       **ppEnd = nullptr) const noexcept;
+   uint8_t * casepSelectWild(
+      ResultSet        *pResultSet, 
+      const Uniseries& sPattern, 
+      int              iLevel,
+      const uint8_t    *pBegin, 
+      uint8_t          **ppEnd = nullptr) const noexcept;
 
    // The non-const and const subscript (index) operators call their 
    // supporting C function, unless the entire content is ASCII text.

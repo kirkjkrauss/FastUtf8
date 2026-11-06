@@ -1,4 +1,4 @@
-// UTF-8-ready C/C++ routines.
+// C/C++ routines for fast UTF-8 functionality.
 //
 // Copyright 2026 Kirk J Krauss.  This is a Derivative Work based on 
 // material that is copyright 2025 Kirk J Krauss and available at
@@ -33,7 +33,6 @@
 #include <iterator>
 #include <cctype>            // For compatibility with C-style isspace()
 #include <iostream>          // For cout
-
 #else   // !__cplusplus
 #include <stdlib.h>          // For memory management
 #include <ctype.h>           // For isspace()
@@ -5274,6 +5273,219 @@ int IndexLenCaseFindAscii(
    return -1;
 }
 
+// Given a pointer to UTF-8 content and pointers to the beginnng and end of 
+// a prospectively matching portion of content -- i.e., what may be a 
+// substring -- returns a pointer to any first matching sequence within the 
+// larger content.  Stops at the *ppEnd location, if any is specified, and 
+// updates it in case a match is found.  Returns nullptr if no match is found.
+//
+uint8_t * FindSliceUtf8(
+          const uint8_t *pContent,       // Haystack
+          const uint8_t *pPatternBegin,  // Beginning of needle
+          const uint8_t *pPatternEnd,    // End of needle
+          uint8_t       **ppEnd)         // Returned location after end of match
+{
+   uint8_t *pSliceInitial;            // Initial pointer to prospective match
+   uint8_t *pContentSequence;         // Pointer to prospective match
+
+   if (!*pPatternBegin || pPatternEnd <= pPatternBegin)  // Got any empty input?
+   {
+      if (ppEnd)
+      {
+         *ppEnd = (uint8_t *) pContent;
+      }
+
+      return (uint8_t *) pContent;
+   }
+
+   if (!*pContent)
+   {
+      if (ppEnd)
+      {
+         *ppEnd = nullptr;
+      }
+
+      return nullptr;
+   }
+
+   pSliceInitial = (uint8_t *) pPatternBegin;
+
+   do
+   {
+      // The outer loop walks through mismatches.
+      if (!CodePointCompareUtf8(pContent, pPatternBegin))
+      {
+         CodePointAdvanceUtf8(&pContent);
+
+         if (!*pContent || (ppEnd && pContent >= *ppEnd))
+         {
+            if (ppEnd)                // "ab" doesn't include "c".
+            {
+               *ppEnd = nullptr;
+            }
+
+            return nullptr;
+         }
+
+         continue;
+      }
+
+      pContentSequence = (uint8_t *) pContent;
+
+      do
+      {
+         // The inner loop walks through potential matches.
+         CodePointAdvanceUtf8(&pPatternBegin);
+         CodePointAdvanceUtf8(&pContent);
+
+         if (!*pPatternBegin || pPatternBegin == pPatternEnd)
+         {
+            if (ppEnd)
+            {
+               *ppEnd = (uint8_t *) pContent;
+            }
+
+            return pContentSequence;  // "ab" includes "b".
+         }
+
+         if (!*pContent || (ppEnd && pContent >= *ppEnd))
+         {
+            if (ppEnd)                // "ab" doesn't include "bc".
+            {
+               *ppEnd = nullptr;
+            }
+
+            return nullptr;
+         }
+
+         if (!CodePointCompareUtf8(pContent, pPatternBegin))
+         {
+            break;
+         }
+      } while (true);
+
+      // Continue from the code point, within the larger content, after the 
+      // last one checked in the outer loop.  The inner loop has walked to 
+      // or beyond that "next" code point already.
+      pContent = pContentSequence;
+      pPatternBegin = pSliceInitial;
+      CodePointAdvanceUtf8(&pContent);
+   } while (true);
+
+   if (ppEnd)
+   {
+      *ppEnd = nullptr;
+   }
+
+   return nullptr;
+}
+
+// Given a pointer to UTF-8 content and pointers to the beginnng and end of 
+// a prospectively matching portion of content -- i.e., what may be a 
+// substring -- returns a pointer to any first matching sequence within the 
+// larger content, after case folding.   Returns nullptr if no match is found.
+//
+uint8_t * CaseFindSliceUtf8(
+          const uint8_t *pContent,       // Haystack
+          const uint8_t *pPatternBegin,  // Beginning of needle
+          const uint8_t *pPatternEnd,    // End of needle
+          uint8_t       **ppEnd)         // Returned location after end of match
+{
+   uint8_t *pSliceInitial;            // Initial pointer to prospective match
+   uint8_t *pContentSequence;         // Pointer to prospective match
+
+   if (!*pPatternBegin || pPatternEnd <= pPatternBegin)  // Got any empty input?
+   {
+      if (ppEnd)
+      {
+         *ppEnd = (uint8_t *) pContent;
+      }
+
+      return (uint8_t *) pContent;
+   }
+
+   if (!*pContent)
+   {
+      if (ppEnd)
+      {
+         *ppEnd = nullptr;
+      }
+
+      return nullptr;
+   }
+
+   pSliceInitial = (uint8_t *) pPatternBegin;
+
+   do
+   {
+      // The outer loop walks through mismatches.
+      if (!CodePointCaseCompareUtf8(pContent, pPatternBegin))
+      {
+         CodePointAdvanceUtf8(&pContent);
+
+         if (!*pContent || (ppEnd && pContent >= *ppEnd))
+         {
+            if (ppEnd)               // "ab" doesn't include "c".
+            {
+               *ppEnd = nullptr;
+            }
+
+            return nullptr;
+         }
+
+         continue;
+      }
+
+      pContentSequence = (uint8_t *) pContent;
+
+      do
+      {
+         // The inner loop walks through potential matches.
+         CodePointAdvanceUtf8(&pPatternBegin);
+         CodePointAdvanceUtf8(&pContent);
+
+         if (!*pPatternBegin || pPatternBegin == pPatternEnd)
+         {
+            if (ppEnd)
+            {
+               *ppEnd = (uint8_t *) pContent;
+            }
+
+            return pContentSequence;  // "ab" includes "b".
+         }
+
+         if (!*pContent || (ppEnd && pContent >= *ppEnd))
+         {
+            if (ppEnd)               // "ab" doesn't include "bc".
+            {
+               *ppEnd = nullptr;
+            }
+
+            return nullptr;
+         }
+
+         if (!CodePointCaseCompareUtf8(pContent, pPatternBegin))
+         {
+            break;
+         }
+      } while (true);
+
+      // Continue from the code point, within the larger content, after the 
+      // last one checked in the outer loop.  The inner loop has walked to 
+      // or beyond that "next" code point already.
+      pContent = pContentSequence;
+      pPatternBegin = pSliceInitial;
+      CodePointAdvanceUtf8(&pContent);
+   } while (true);
+
+   if (ppEnd)
+   {
+      *ppEnd = nullptr;
+   }
+
+   return nullptr;
+}
+
 // Compares null-terminated UTF-8 content, matching wildcards.  Accepts '?' 
 // as a single-code-point wildcard.  For each '*' wildcard, seeks out a 
 // matching sequence of any code points beyond it.  Otherwise compares the 
@@ -6067,8 +6279,8 @@ uint8_t * WildFindUtf8(
 {
    uint8_t *pTame;           // Code point in content to search
    uint8_t *pWild;           // Code point in search pattern
-   uint8_t *pTameMatch;      // Prospective *ppFirst match in content
-   uint8_t *pWildMatch;      // Prospective match in content with first '*'
+   uint8_t *pFirstMatch;     // Prospective *ppFirst match in overall content
+   uint8_t *pWildMatch;      // Prospective match in content with '*' wildcard
    uint8_t *pTameSequence;   // Prospective match in content after '*'
    uint8_t *pWildSequence;   // Prospective match in pattern after '*'
    int     iQCount;          // Length of target that consists of '?' wildcards
@@ -6097,7 +6309,7 @@ uint8_t * WildFindUtf8(
       // The search pattern begins with a wildcard.  Set up for the fourth 
 	  // "do" loop and skip on down there.
       iQCount = 0;
-      pTameMatch = pWildMatch = pTameSequence = nullptr;
+      pFirstMatch = pWildMatch = pTameSequence = nullptr;
 
       do
       {
@@ -6112,14 +6324,16 @@ uint8_t * WildFindUtf8(
             ++pSearchPattern;
             pWildSequence = (uint8_t *) pSearchPattern;
             pTameSequence = (uint8_t *) pTame;
+            iQCount = 0;
          }
          else if (*pSearchPattern == '?')
          {
-            if (!pTameMatch)
+            if (!pFirstMatch)
             {
-               pTameMatch = pTame;
+               pFirstMatch = pTame;
             }
 
+            ++iQCount;
             ++pSearchPattern;
             CodePointAdvanceUtf8((const uint8_t **) &pTame);
 
@@ -6127,37 +6341,56 @@ uint8_t * WildFindUtf8(
             {
                if (*pSearchPattern)
                {
-                  while (*pSearchPattern == '*')
+                  if (*pSearchPattern == '*')
                   {
                      pTameSequence = pTame;
-                     pSearchPattern++;
+                     iQCount = 0;
+
+                     while (*(++pSearchPattern) == '*')
+                     {
+                        continue;
+                     }
                   }
                }
 
-               if (*pSearchPattern)  // "?*?" doesn't find "a".
+               if (!*pSearchPattern && !pWildMatch)
                {
-                   pTame = pTameMatch = pWildMatch = nullptr;
+                  pFirstMatch = pWildMatch = nullptr;
+
+                  if (ppTarget)    // "?*?" doesn't find "a".
+                  {
+                     *ppTarget = nullptr;
+                  }
+
+                  if (ppLast)
+                  {
+                     *ppLast = nullptr;
+                  }
                }
-               else                // "*?" finds "a".
+               else
                {
-                  CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
+                  if (ppTarget)    // "*?" finds "a".
+                  {
+                     *ppTarget = pTame;
+
+                     while (iQCount && CodePointBacktrackUtf8(
+                               (const uint8_t **) ppTarget, *ppFirst))
+                     {
+                        iQCount--;
+                     }
+                  }
+
+                  if (ppLast)
+                  {
+                     CodePointBacktrackUtf8((const uint8_t **) &pTame, 
+                         *ppFirst);
+                     *ppLast = pTame;
+                  }
                }
 
-               if (ppTarget) 
-               {
-                  *ppTarget = pTameSequence ? pTameSequence : pTame;
-               }
-
-               if (ppLast)
-               {
-                   *ppLast = pTame;
-               }
-
-               *ppFirst = pTameMatch;
+               *ppFirst = pFirstMatch;
                return pWildMatch;
             }
-
-            ++iQCount;
 
             if (!pWildMatch)
             {
@@ -6166,36 +6399,29 @@ uint8_t * WildFindUtf8(
          }
          else if (!*pSearchPattern)
          {
+            while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+            {
+               continue;
+            }
+
             if (ppTarget)          // "*" finds "a".
             {
                *ppTarget = pTame;
-            }
 
-            while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
-            {
-                continue;
-            }
-
-            CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
-
-            if (ppLast)
-            {
-                *ppLast = pTame;
-            }
-
-            if (ppTarget)
-            {
-                *ppTarget = pTame;
-                iQCount--;
-
-                while (iQCount && CodePointBacktrackUtf8(
+               while (iQCount && CodePointBacktrackUtf8(
                          (const uint8_t **) ppTarget, *ppFirst))
-                {
-                    iQCount--;
-                }
+               {
+                  iQCount--;
+               }
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pWildMatch;
+            if (ppLast) 
+            {
+               CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
+               *ppLast = pTame;
+            }
+
+            *ppFirst = pFirstMatch ? pFirstMatch : pWildMatch;
             return pWildMatch;
          }
          else
@@ -6204,9 +6430,9 @@ uint8_t * WildFindUtf8(
          }
       } while (true);
 
-      if (!pTameMatch)
+      if (!pFirstMatch)
       {
-         pTameMatch = pTame;
+         pFirstMatch = pTame;
       }
 
       pWild = (uint8_t *) pSearchPattern;
@@ -6241,7 +6467,7 @@ uint8_t * WildFindUtf8(
          }
       } while (true);
 
-      pTameSequence = pWildMatch = pTameMatch = nullptr;
+      pTameSequence = pWildMatch = pFirstMatch = nullptr;
       pWild = (uint8_t *) pSearchPattern;
       
       // Find a first '*' wildcard, if one exists, and the beginning of any 
@@ -6269,7 +6495,7 @@ uint8_t * WildFindUtf8(
                         *ppTarget = pTame;
                      }
 
-                     *ppFirst = pTameMatch ? pTameMatch : pTame;
+                     *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                      return pWildMatch ? pWildMatch : pTame;
                   }
                }
@@ -6300,18 +6526,18 @@ uint8_t * WildFindUtf8(
                   *ppTarget = pTameSequence ? pTameSequence : pTame;
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                return pWildMatch;
             }
             else
             {
-                if (ppTarget)      // No wildcard found.
-                {
-                    *ppTarget = nullptr;
-                }
+               if (ppTarget)       // No wildcard found.
+               {
+                  *ppTarget = nullptr;
+               }
 
-                *ppFirst = nullptr;
-                return pWildMatch;
+               *ppFirst = nullptr;
+               return pWildMatch;
             }
          }
          else if (*pWild == '*')
@@ -6319,31 +6545,31 @@ uint8_t * WildFindUtf8(
             // Set up for the fourth "do" loop and skip on down there.
             pWildMatch = pTame;
 
-            while (CodePointAdvanceUtf8((const uint8_t **) &pWild) && 
-                         *pWild == '*')
+            while (*(++pWild) == '*')
             {
                continue;
             }
 
-            if (!*pWild)
+            if (!*pWild)           // "ab*" finds "...abc".
             {
-               if (ppTarget)       // "ab*" finds "...abc".
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
+
+               while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+               {
+                   continue;
+               }
+
+               if (ppTarget)
                {
                   *ppTarget = pTame;
                }
 
                if (ppLast)
                {
-                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
-                  {
-                     continue;
-                  }
-
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
                return pWildMatch;
             }
 
@@ -6354,9 +6580,9 @@ uint8_t * WildFindUtf8(
                {
                   if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                   {
-                     if (pTameMatch)   // "a*bc" doesn't find "...ab".
+                     if (pFirstMatch)  // "a*bc" doesn't find "...ab".
                      {
-                        pTame = pTameMatch;
+                        pTame = pFirstMatch;
                         CodePointAdvanceUtf8((const uint8_t **) &pTame);
                      }
 
@@ -6372,17 +6598,17 @@ uint8_t * WildFindUtf8(
          }
          else if (!CodePointCompareUtf8(pWild, pTame) && *pWild != '?')
          {
-            if (pTameMatch)            // "*abc" doesn't find "...abd".
+            if (pFirstMatch)           // "*abc" doesn't find "...abd".
             {
-               pTame = pTameMatch;
+               pTame = pFirstMatch;
             }
 
             CodePointAdvanceUtf8((const uint8_t **) &pTame);
             goto seek_pattern;
          }
-         else if (!pTameMatch)
+         else if (!pFirstMatch)
          {
-            pTameMatch = pTame;        // Got a prospective match.
+            pFirstMatch = pTame;       // Got a prospective match.
          }
 
          // Everything's a match, so far.
@@ -6425,7 +6651,7 @@ uint8_t * WildFindUtf8(
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pTame;
+            *ppFirst = pFirstMatch ? pFirstMatch : pTame;
             return pWildMatch;
          }
 
@@ -6452,9 +6678,9 @@ uint8_t * WildFindUtf8(
             {
                if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                {
-                  if (pTameMatch)      // "a*b*c" doesn't find "...ab".
+                  if (pFirstMatch)     // "a*b*c" doesn't find "ab".
                   {
-                     pTame = pTameMatch;
+                     pTame = pFirstMatch;
                   }
 
                   CodePointAdvanceUtf8((const uint8_t **) &pTame);
@@ -6528,7 +6754,7 @@ uint8_t * WildFindUtf8(
                         }
                      }
 
-                     *ppFirst = pTameMatch ? pTameMatch : pTame;
+                     *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                      return pWildMatch;
                   }
 
@@ -6552,7 +6778,7 @@ uint8_t * WildFindUtf8(
                   }
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                return pWildMatch;
             }
 			else
@@ -6639,7 +6865,7 @@ uint8_t * WildFindUtf8(
                *ppTarget = pTameSequence ? pTameSequence : pTame;
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pTame;
+            *ppFirst = pFirstMatch ? pFirstMatch : pTame;
             return pWildMatch;
          }
          else
@@ -6703,8 +6929,8 @@ uint8_t * WildLenFindUtf8(
    int     iQCount;         // Length of target that consists of '?' wildcards
    uint8_t *pTame;          // Code point in content to search
    uint8_t *pWild;          // Code point in search pattern
-   uint8_t *pTameMatch;     // Prospective *ppFirst match in content
-   uint8_t *pWildMatch;     // Prospective match in content with first '*'
+   uint8_t *pFirstMatch;    // Prospective *ppFirst match in overall content
+   uint8_t *pWildMatch;     // Prospective match in content with '*' wildcard
    uint8_t *pTameSequence;  // Prospective match in content after '*'
    uint8_t *pWildSequence;  // Prospective match in pattern after '*'
 
@@ -6733,7 +6959,7 @@ uint8_t * WildLenFindUtf8(
       // The search pattern begins with a wildcard.  Set up for the fourth 
 	  // "do" loop and skip on down there.
       iQCount = 0;
-      pTameMatch = pWildMatch = pTameSequence = nullptr;
+      pFirstMatch = pWildMatch = pTameSequence = nullptr;
 
       do
       {
@@ -6751,54 +6977,75 @@ uint8_t * WildLenFindUtf8(
             iWildSequence = iSearchPattern;
             pTameSequence = (uint8_t *) pTame;
             iTameSequence = iTame;
+            iQCount = 0;
          }
          else if (*pSearchPattern == '?')
          {
-            if (!pTameMatch)
+            if (!pFirstMatch)
             {
-               pTameMatch = pTame;
+               pFirstMatch = pTame;
                iTameMatch = iTame;
             }
 
+            ++iQCount;
             ++pSearchPattern;
             ++iSearchPattern;
             CodePointAdvanceUtf8((const uint8_t **) &pTame);
             ++iTame;
-            ++iQCount;
 
             if (lenContent <= iTame || !*pTame)
             {
                if (lenPattern > iSearchPattern && *pSearchPattern)
                {
-                  while (*pSearchPattern == '*')
+                  if (*pSearchPattern == '*')
                   {
                      pTameSequence = pTame;
                      iTameSequence = iTame;
-                     ++pSearchPattern;
-                     ++iSearchPattern;
+                     iQCount = 0;
+
+                     while (*(++pSearchPattern) == '*')
+                     {
+                        ++iSearchPattern;
+                     }
                   }
                }
 
-               if (*pSearchPattern)  // "?*?" doesn't find "a".
+               if (!*pSearchPattern && !pWildMatch)
                {
-                   pTame = pTameMatch = pWildMatch = nullptr;
+                  pFirstMatch = pWildMatch = nullptr;
+
+                  if (ppTarget)    // "?*?" doesn't find "a".
+                  {
+                     *ppTarget = nullptr;
+                  }
+
+                  if (ppLast)
+                  {
+                     *ppLast = nullptr;
+                  }
                }
-               else                // "*?" finds "a".
+               else
                {
-                  CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
+                  if (ppTarget)    // "*?" finds "a".
+                  {
+                     *ppTarget = pTame;
+
+                     while (iQCount && CodePointBacktrackUtf8(
+                               (const uint8_t **) ppTarget, *ppFirst))
+                     {
+                        iQCount--;
+                     }
+                  }
+
+                  if (ppLast)
+                  {
+                     CodePointBacktrackUtf8((const uint8_t **) &pTame, 
+                         *ppFirst);
+                     *ppLast = pTame;
+                  }
                }
 
-               if (ppTarget) 
-               {
-                  *ppTarget = pTameSequence ? pTameSequence : pTame;
-               }
-
-               if (ppLast)
-               {
-                   *ppLast = pTame;
-               }
-
-               *ppFirst = pTameMatch;
+               *ppFirst = pFirstMatch;
                return pWildMatch;
             }
 
@@ -6810,36 +7057,29 @@ uint8_t * WildLenFindUtf8(
          }
          else if (lenPattern <= iSearchPattern || !*pSearchPattern)
          {
+            while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+            {
+               continue;
+            }
+
             if (ppTarget)          // "*" finds "a".
             {
                *ppTarget = pTame;
-            }
 
-            while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
-            {
-                continue;
-            }
-
-            CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
-
-            if (ppLast)
-            {
-                *ppLast = pTame;
-            }
-
-            if (ppTarget)
-            {
-                *ppTarget = pTame;
-                iQCount--;
-
-                while (iQCount && CodePointBacktrackUtf8(
+               while (iQCount && CodePointBacktrackUtf8(
                          (const uint8_t **) ppTarget, *ppFirst))
-                {
-                    iQCount--;
-                }
+               {
+                  iQCount--;
+               }
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pWildMatch;
+            if (ppLast) 
+            {
+               CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
+               *ppLast = pTame;
+            }
+
+            *ppFirst = pFirstMatch ? pFirstMatch : pWildMatch;
             return pWildMatch;
          }
          else
@@ -6848,9 +7088,9 @@ uint8_t * WildLenFindUtf8(
          }
       } while (true);
 
-      if (!pTameMatch)
+      if (!pFirstMatch)
       {
-         pTameMatch = pTame;
+         pFirstMatch = pTame;
       }
 
       pWild = (uint8_t *) pSearchPattern;
@@ -6890,7 +7130,7 @@ uint8_t * WildLenFindUtf8(
          }
       } while (true);
 
-      pTameSequence = pWildMatch = pTameMatch = nullptr;
+      pTameSequence = pWildMatch = pFirstMatch = nullptr;
       pWild = (uint8_t *) pSearchPattern;
       iWild = iSearchPattern;
 
@@ -6907,7 +7147,7 @@ uint8_t * WildLenFindUtf8(
                {
                   if (lenPattern <= ++iWild)
                   {
-                     if (ppLast)   // "ab*" finds "...ab".
+                     if (ppLast)   // "ab*" finds "ab".
                      {
                         *ppLast = pTame;
                         CodePointBacktrackUtf8(
@@ -6919,12 +7159,12 @@ uint8_t * WildLenFindUtf8(
                         *ppTarget = pTame;
                      }
 
-                     *ppFirst = pTameMatch ? pTameMatch : pTame;
+                     *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                      return pWildMatch ? pWildMatch : pTame;
                   }
                }
 
-               if (ppLast)         // "*abcd" doesn't find "...abc".
+               if (ppLast)         // "abcd" doesn't find "abc".
                {
                   *ppLast = nullptr;
                }
@@ -6939,7 +7179,7 @@ uint8_t * WildLenFindUtf8(
             }
             else if (pWildMatch)
             {
-               if (ppLast)         // "*abc" finds "...abc".
+               if (ppLast)         // "*abc" finds "abc".
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -6950,25 +7190,25 @@ uint8_t * WildLenFindUtf8(
                   *ppTarget = pTameSequence ? pTameSequence : pTame;
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                return pWildMatch;
             }
             else
             {
-                if (ppTarget)      // No wildcard found.
-                {
-                    *ppTarget = nullptr;
-                }
+               if (ppTarget)       // No wildcard found.
+               {
+                  *ppTarget = nullptr;
+               }
 
-                *ppFirst = nullptr;
-                return pWildMatch;
+               *ppFirst = nullptr;
+               return pWildMatch;
             }
          }
          else if (lenPattern <= iWild)
          {
-            if (pTameMatch)        // "a*c" doesn't find "...abcd".
+            if (pFirstMatch)       // "a*c" doesn't find "...abcd".
             {
-               pTame = pTameMatch;
+               pTame = pFirstMatch;
                iTame = iTameMatch;
             }
 
@@ -6994,25 +7234,26 @@ uint8_t * WildLenFindUtf8(
                }
             }
 
-            if (!*pWild)
+            if (!*pWild)           // "ab*" finds "...abc".
             {
-               if (ppTarget)       // "ab*" finds "...abc".
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
+
+               while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+               {
+                   continue;
+               }
+
+               if (ppTarget)
                {
                   *ppTarget = pTame;
                }
 
                if (ppLast)
                {
-                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
-                  {
-                     continue;
-                  }
-
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
                return pWildMatch;
             }
 
@@ -7023,9 +7264,9 @@ uint8_t * WildLenFindUtf8(
                {
                   if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                   {
-                     if (pTameMatch)  // "a*bc" doesn't find "...ab".
+                     if (pFirstMatch)  // "a*bc" doesn't find "ab".
                      {
-                        pTame = pTameMatch;
+                        pTame = pFirstMatch;
                         CodePointAdvanceUtf8((const uint8_t **) &pTame);
                         iTame = 1 + iTameMatch;
                      }
@@ -7046,9 +7287,9 @@ uint8_t * WildLenFindUtf8(
          }
          else if (!CodePointCompareUtf8(pWild, pTame) && *pWild != '?')
          {
-            if (pTameMatch)        // "*abc" doesn't find "...abd".
+            if (pFirstMatch)       // "abc" doesn't find "abd".
             {
-               pTame = pTameMatch;
+               pTame = pFirstMatch;
                iTame = iTameMatch;
             }
 
@@ -7056,9 +7297,9 @@ uint8_t * WildLenFindUtf8(
             iTame++;
             goto seek_pattern;
          }
-         else if (!pTameMatch)
+         else if (!pFirstMatch)
          {
-            pTameMatch = pTame;    // Got a prospective match.
+            pFirstMatch = pTame;   // Got prospective match on search pattern.
             iTameMatch = iTame;
          }
 
@@ -7087,7 +7328,7 @@ uint8_t * WildLenFindUtf8(
          {
             if (lenPattern <= ++iWild)
             {
-               if (ppLast)         // "ab**c*" finds "...abcd".
+               if (ppLast)         // "ab**c*" finds "abcd".
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -7098,14 +7339,14 @@ uint8_t * WildLenFindUtf8(
                   *ppTarget = pTame;
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
+               *ppFirst = pTame;
                return pWildMatch;
             }
          }
 
          if (lenPattern <= iWild || !*pWild)
          {
-            if (ppTarget)          // "a*c*" finds "...abcd".
+            if (ppTarget)          // "a*c*" finds "abcd".
             {
                *ppTarget = pTame;
             }
@@ -7121,13 +7362,13 @@ uint8_t * WildLenFindUtf8(
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pTame;
+            *ppFirst = pFirstMatch ? pFirstMatch : pTame;
             return pWildMatch;
          }
 
          if (lenContent <= iTame || !*pTame)
          {
-            if (ppLast)            // "*bcd*" doesn't find "...abc".
+            if (ppLast)            // "*bcd*" doesn't find "abc".
             {
                *ppLast = nullptr;
             }
@@ -7148,9 +7389,9 @@ uint8_t * WildLenFindUtf8(
             {
                if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                {
-                  if (pTameMatch)      // "a*b*c" doesn't find "...ab".
+                  if (pFirstMatch)     // "a*b*c" doesn't find "ab".
                   {
-                     pTame = pTameMatch;
+                     pTame = pFirstMatch;
                      iTame = iTameMatch;
                   }
 
@@ -7174,7 +7415,7 @@ uint8_t * WildLenFindUtf8(
          // The equivalent portion of the upper loop is really simple.
          if (lenContent <= iTame || !*pTame)
          {
-            if (ppLast)            // "*bc" doesn't find "...abcd".
+            if (ppLast)            // "*bc" doesn't find "abcd".
             {
                *ppLast = nullptr;
             }
@@ -7213,7 +7454,7 @@ uint8_t * WildLenFindUtf8(
                   {
                      CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
 
-                     if (ppLast)   // "a*?" finds "...abcd".
+                     if (ppLast)   // "a*?" finds "abcd".
                      {
                         *ppLast = pTame;
                      }
@@ -7230,18 +7471,18 @@ uint8_t * WildLenFindUtf8(
                         }
                      }
 
-                     *ppFirst = pTameMatch ? pTameMatch : pTame;
+                     *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                      return pWildMatch;
                   }
 
-                  if (ppLast)      // "a*?d" finds "...abcd".
+                  if (ppLast)      // "a*?d" finds "abcd".
                   {
                      *ppLast = pTameSequence;
                   }
                }
                else
                {
-                  if (ppLast)      // "a*c*d" finds "...abcd".
+                  if (ppLast)      // "a*c*d" finds "abcd".
                   {
                      *ppLast = pTame;
                      CodePointBacktrackUtf8((const uint8_t **) ppLast, 
@@ -7254,7 +7495,7 @@ uint8_t * WildLenFindUtf8(
                   }
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                return pWildMatch;
             }
 			else
@@ -7294,7 +7535,7 @@ uint8_t * WildLenFindUtf8(
             {
                if (lenContent <= ++iTameSequence || !*pTameSequence)
                {
-                  if (ppLast)      // "*a*b" doesn't find "...ac".
+                  if (ppLast)      // "*a*b" doesn't find "ac".
                   {
                      *ppLast = nullptr;
                   }
@@ -7314,7 +7555,7 @@ uint8_t * WildLenFindUtf8(
          }
 		 else
          {
-            if (ppLast)            // "?a*" doesn't find "...ab".
+            if (ppLast)            // "?a*" doesn't find "ab".
             {
                *ppLast = nullptr;
             }
@@ -7334,7 +7575,7 @@ uint8_t * WildLenFindUtf8(
       {
          if (lenPattern <= iWild || !*pWild)
          {
-            if (ppLast)            // "*bc" finds "...abc".
+            if (ppLast)            // "*bc" finds "abc".
             {
                *ppLast = pTame;
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -7345,12 +7586,12 @@ uint8_t * WildLenFindUtf8(
                *ppTarget = pTameSequence ? pTameSequence : pTame;
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pTame;
+            *ppFirst = pFirstMatch ? pFirstMatch : pTame;
             return pWildMatch;
          }
          else
          {
-            if (ppLast)            // "*bcd" doesn't find "...abc".
+            if (ppLast)            // "*bcd" doesn't find "abc".
             {
                *ppLast = nullptr;
             }
@@ -7402,8 +7643,8 @@ uint8_t * WildCaseFindUtf8(
 {
    uint8_t *pTame;           // Code point in content to search
    uint8_t *pWild;           // Code point in search pattern
-   uint8_t *pTameMatch;      // Prospective *ppFirst match in content
-   uint8_t *pWildMatch;      // Prospective match in content with first '*'
+   uint8_t *pFirstMatch;     // Prospective *ppFirst match in overall content
+   uint8_t *pWildMatch;      // Prospective match in content with '*' wildcard
    uint8_t *pTameSequence;   // Prospective match in content after '*'
    uint8_t *pWildSequence;   // Prospective match in pattern after '*'
    int     iQCount;          // Length of target that consists of '?' wildcards
@@ -7432,7 +7673,7 @@ uint8_t * WildCaseFindUtf8(
       // The search pattern begins with a wildcard.  Set up for the fourth 
 	  // "do" loop and skip on down there.
       iQCount = 0;
-      pTameMatch = pWildMatch = pTameSequence = nullptr;
+      pFirstMatch = pWildMatch = pTameSequence = nullptr;
 
       do
       {
@@ -7447,14 +7688,16 @@ uint8_t * WildCaseFindUtf8(
             ++pSearchPattern;
             pWildSequence = (uint8_t *) pSearchPattern;
             pTameSequence = (uint8_t *) pTame;
+            iQCount = 0;
          }
          else if (*pSearchPattern == '?')
          {
-            if (!pTameMatch)
+            if (!pFirstMatch)
             {
-               pTameMatch = pTame;
+               pFirstMatch = pTame;
             }
 
+            ++iQCount;
             ++pSearchPattern;
             CodePointAdvanceUtf8((const uint8_t **) &pTame);
 
@@ -7462,37 +7705,56 @@ uint8_t * WildCaseFindUtf8(
             {
                if (*pSearchPattern)
                {
-                  while (*pSearchPattern == '*')
+                  if (*pSearchPattern == '*')
                   {
                      pTameSequence = pTame;
-                     pSearchPattern++;
+                     iQCount = 0;
+
+                     while (*(++pSearchPattern) == '*')
+                     {
+                        continue;
+                     }
                   }
                }
 
-               if (*pSearchPattern)  // "?*?" doesn't find "a".
+               if (!*pSearchPattern && !pWildMatch)
                {
-                   pTame = pTameMatch = pWildMatch = nullptr;
+                  pFirstMatch = pWildMatch = nullptr;
+
+                  if (ppTarget)    // "?*?" doesn't find "a".
+                  {
+                     *ppTarget = nullptr;
+                  }
+
+                  if (ppLast)
+                  {
+                     *ppLast = nullptr;
+                  }
                }
-               else                // "*?" finds "a".
+               else
                {
-                  CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
+                  if (ppTarget)    // "*?" finds "a".
+                  {
+                     *ppTarget = pTame;
+
+                     while (iQCount && CodePointBacktrackUtf8(
+                               (const uint8_t **) ppTarget, *ppFirst))
+                     {
+                        iQCount--;
+                     }
+                  }
+
+                  if (ppLast)
+                  {
+                     CodePointBacktrackUtf8((const uint8_t **) &pTame, 
+                         *ppFirst);
+                     *ppLast = pTame;
+                  }
                }
 
-               if (ppTarget) 
-               {
-                  *ppTarget = pTameSequence ? pTameSequence : pTame;
-               }
-
-               if (ppLast)
-               {
-                   *ppLast = pTame;
-               }
-
-               *ppFirst = pTameMatch;
+               *ppFirst = pFirstMatch;
                return pWildMatch;
             }
-
-            ++iQCount;
 
             if (!pWildMatch)
             {
@@ -7501,36 +7763,29 @@ uint8_t * WildCaseFindUtf8(
          }
          else if (!*pSearchPattern)
          {
+            while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+            {
+               continue;
+            }
+
             if (ppTarget)          // "*" finds "a".
             {
                *ppTarget = pTame;
-            }
 
-            while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
-            {
-                continue;
-            }
-
-            CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
-
-            if (ppLast)
-            {
-                *ppLast = pTame;
-            }
-
-            if (ppTarget)
-            {
-                *ppTarget = pTame;
-                iQCount--;
-
-                while (iQCount && CodePointBacktrackUtf8(
+               while (iQCount && CodePointBacktrackUtf8(
                          (const uint8_t **) ppTarget, *ppFirst))
-                {
-                    iQCount--;
-                }
+               {
+                  iQCount--;
+               }
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pWildMatch;
+            if (ppLast) 
+            {
+               CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
+               *ppLast = pTame;
+            }
+
+            *ppFirst = pFirstMatch ? pFirstMatch : pWildMatch;
             return pWildMatch;
          }
          else
@@ -7539,9 +7794,9 @@ uint8_t * WildCaseFindUtf8(
          }
       } while (true);
 
-      if (!pTameMatch)
+      if (!pFirstMatch)
       {
-         pTameMatch = pTame;
+         pFirstMatch = pTame;
       }
 
       pWild = (uint8_t *) pSearchPattern;
@@ -7576,7 +7831,7 @@ uint8_t * WildCaseFindUtf8(
          }
       } while (true);
 
-      pTameSequence = pWildMatch = pTameMatch = nullptr;
+      pTameSequence = pWildMatch = pFirstMatch = nullptr;
       pWild = (uint8_t *) pSearchPattern;
       
       // Find a first '*' wildcard, if one exists, and the beginning of any 
@@ -7592,7 +7847,7 @@ uint8_t * WildCaseFindUtf8(
                {
                   if (!(*(++pWild)))
                   {
-                     if (ppLast)   // "ab*" finds "...ab".
+                     if (ppLast)   // "ab*" finds "ab".
                      {
                         *ppLast = pTame;
                         CodePointBacktrackUtf8(
@@ -7604,12 +7859,12 @@ uint8_t * WildCaseFindUtf8(
                         *ppTarget = pTame;
                      }
 
-                     *ppFirst = pTameMatch ? pTameMatch : pTame;
+                     *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                      return pWildMatch ? pWildMatch : pTame;
                   }
                }
       
-               if (ppLast)         // "*abcd" doesn't find "...abc".
+               if (ppLast)         // "abcd" doesn't find "abc".
                {
                   *ppLast = nullptr;
                }
@@ -7624,7 +7879,7 @@ uint8_t * WildCaseFindUtf8(
             }
             else if (pWildMatch)
             {
-               if (ppLast)         // "*abc" finds "...abc".
+               if (ppLast)         // "*abc" finds "abc".
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -7635,18 +7890,18 @@ uint8_t * WildCaseFindUtf8(
                   *ppTarget = pTameSequence ? pTameSequence : pTame;
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                return pWildMatch;
             }
             else
             {
-                if (ppTarget)      // No wildcard found.
-                {
-                    *ppTarget = nullptr;
-                }
+               if (ppTarget)       // No wildcard found.
+               {
+                  *ppTarget = nullptr;
+               }
 
-                *ppFirst = nullptr;
-                return pWildMatch;
+               *ppFirst = nullptr;
+               return pWildMatch;
             }
          }
          else if (*pWild == '*')
@@ -7654,31 +7909,31 @@ uint8_t * WildCaseFindUtf8(
             // Set up for the fourth "do" loop and skip on down there.
             pWildMatch = pTame;
 
-            while (CodePointAdvanceUtf8((const uint8_t **) &pWild) && 
-                         *pWild == '*')
+            while (*(++pWild) == '*')
             {
                continue;
             }
 
-            if (!*pWild)
+            if (!*pWild)           // "ab*" finds "...abc".
             {
-               if (ppTarget)       // "ab*" finds "...abc".
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
+
+               while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+               {
+                   continue;
+               }
+
+               if (ppTarget)
                {
                   *ppTarget = pTame;
                }
 
                if (ppLast)
                {
-                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
-                  {
-                     continue;
-                  }
-
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
                return pWildMatch;
             }
 
@@ -7689,9 +7944,9 @@ uint8_t * WildCaseFindUtf8(
                {
                   if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                   {
-                     if (pTameMatch)   // "a*bc" doesn't find "...ab".
+                     if (pFirstMatch)  // "a*bc" doesn't find "ab".
                      {
-                        pTame = pTameMatch;
+                        pTame = pFirstMatch;
                         CodePointAdvanceUtf8((const uint8_t **) &pTame);
                      }
 
@@ -7707,17 +7962,17 @@ uint8_t * WildCaseFindUtf8(
          }
          else if (!CodePointCaseCompareUtf8(pWild, pTame) && *pWild != '?')
          {
-            if (pTameMatch)            // "*abc" doesn't find "...abd".
+            if (pFirstMatch)           // "abc" doesn't find "abd".
             {
-               pTame = pTameMatch;
+               pTame = pFirstMatch;
             }
 
             CodePointAdvanceUtf8((const uint8_t **) &pTame);
             goto seek_pattern;
          }
-         else if (!pTameMatch)
+         else if (!pFirstMatch)
          {
-            pTameMatch = pTame;        // Got a prospective match.
+            pFirstMatch = pTame;       // Got prospective match on search pattern.
          }
 
          // Everything's a match, so far.
@@ -7744,7 +7999,7 @@ uint8_t * WildCaseFindUtf8(
 
          if (!*pWild)
          {
-            if (ppTarget)          // "a*c*" finds "...abcd".
+            if (ppTarget)          // "a*c*" finds "abcd".
             {
                *ppTarget = pTame;
             }
@@ -7760,13 +8015,13 @@ uint8_t * WildCaseFindUtf8(
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pTame;
+            *ppFirst = pFirstMatch ? pFirstMatch : pTame;
             return pWildMatch;
          }
 
          if (!*pTame)
          {
-            if (ppLast)            // "*bcd*" doesn't find "...abc".
+            if (ppLast)            // "*bcd*" doesn't find "abc".
             {
                *ppLast = nullptr;
             }
@@ -7787,9 +8042,9 @@ uint8_t * WildCaseFindUtf8(
             {
                if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                {
-                  if (pTameMatch)      // "a*b*c" doesn't find "...ab".
+                  if (pFirstMatch)     // "a*b*c" doesn't find "ab".
                   {
-                     pTame = pTameMatch;
+                     pTame = pFirstMatch;
                   }
 
                   CodePointAdvanceUtf8((const uint8_t **) &pTame);
@@ -7807,7 +8062,7 @@ uint8_t * WildCaseFindUtf8(
          // The equivalent portion of the upper loop is really simple.
          if (!*pTame)
          {
-            if (ppLast)            // "*bc" doesn't find "...abcd".
+            if (ppLast)            // "*bc" doesn't find "abcd".
             {
                *ppLast = nullptr;
             }
@@ -7846,7 +8101,7 @@ uint8_t * WildCaseFindUtf8(
                   {
                      CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
 
-                     if (ppLast)   // "a*?" finds "...abcd".
+                     if (ppLast)   // "a*?" finds "abcd".
                      {
                         *ppLast = pTame;
                      }
@@ -7863,18 +8118,18 @@ uint8_t * WildCaseFindUtf8(
                         }
                      }
 
-                     *ppFirst = pTameMatch ? pTameMatch : pTame;
+                     *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                      return pWildMatch;
                   }
 
-                  if (ppLast)      // "a*?d" finds "...abcd".
+                  if (ppLast)      // "a*?d" finds "abcd".
                   {
                      *ppLast = pTameSequence;
                   }
                }
                else
                {
-                  if (ppLast)      // "a*c*d" finds "...abcd".
+                  if (ppLast)      // "a*c*d" finds "abcd".
                   {
                      *ppLast = pTame;
                      CodePointBacktrackUtf8((const uint8_t **) ppLast, 
@@ -7887,7 +8142,7 @@ uint8_t * WildCaseFindUtf8(
                   }
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                return pWildMatch;
             }
 			else
@@ -7924,7 +8179,7 @@ uint8_t * WildCaseFindUtf8(
             {
                if (!*pTameSequence)
                {
-                  if (ppLast)      // "*a*b" doesn't find "...ac".
+                  if (ppLast)      // "*a*b" doesn't find "ac".
                   {
                      *ppLast = nullptr;
                   }
@@ -7943,7 +8198,7 @@ uint8_t * WildCaseFindUtf8(
          }
 		 else
          {
-            if (ppLast)            // "?a*" doesn't find "...ab".
+            if (ppLast)            // "?a*" doesn't find "ab".
             {
                *ppLast = nullptr;
             }
@@ -7963,7 +8218,7 @@ uint8_t * WildCaseFindUtf8(
       {
          if (!*pWild)
          {
-            if (ppLast)            // "*bc" finds "...abc".
+            if (ppLast)            // "*bc" finds "abc".
             {
                *ppLast = pTame;
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -7974,12 +8229,12 @@ uint8_t * WildCaseFindUtf8(
                *ppTarget = pTameSequence ? pTameSequence : pTame;
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pTame;
+            *ppFirst = pFirstMatch ? pFirstMatch : pTame;
             return pWildMatch;
          }
          else
          {
-            if (ppLast)            // "*bcd" doesn't find "...abc".
+            if (ppLast)            // "*bcd" doesn't find "abc".
             {
                *ppLast = nullptr;
             }
@@ -8038,8 +8293,8 @@ uint8_t * WildLenCaseFindUtf8(
    int     iQCount;         // Length of target that consists of '?' wildcards
    uint8_t *pTame;          // Code point in content to search
    uint8_t *pWild;          // Code point in search pattern
-   uint8_t *pTameMatch;     // Prospective *ppFirst match in content
-   uint8_t *pWildMatch;     // Prospective match in content with first '*'
+   uint8_t *pFirstMatch;    // Prospective *ppFirst match in overall content
+   uint8_t *pWildMatch;     // Prospective match in content with '*' wildcard
    uint8_t *pTameSequence;  // Prospective match in content after '*'
    uint8_t *pWildSequence;  // Prospective match in pattern after '*'
 
@@ -8068,7 +8323,7 @@ uint8_t * WildLenCaseFindUtf8(
       // The search pattern begins with a wildcard.  Set up for the fourth 
 	  // "do" loop and skip on down there.
       iQCount = 0;
-      pTameMatch = pWildMatch = pTameSequence = nullptr;
+      pFirstMatch = pWildMatch = pTameSequence = nullptr;
 
       do
       {
@@ -8086,54 +8341,75 @@ uint8_t * WildLenCaseFindUtf8(
             iWildSequence = iSearchPattern;
             pTameSequence = (uint8_t *) pTame;
             iTameSequence = iTame;
+            iQCount = 0;
          }
          else if (*pSearchPattern == '?')
          {
-            if (!pTameMatch)
+            if (!pFirstMatch)
             {
-               pTameMatch = pTame;
+               pFirstMatch = pTame;
                iTameMatch = iTame;
             }
 
+            ++iQCount;
             ++pSearchPattern;
             ++iSearchPattern;
             CodePointAdvanceUtf8((const uint8_t **) &pTame);
             ++iTame;
-            ++iQCount;
 
             if (lenContent <= iTame || !*pTame)
             {
                if (lenPattern > iSearchPattern && *pSearchPattern)
                {
-                  while (*pSearchPattern == '*')
+                  if (*pSearchPattern == '*')
                   {
                      pTameSequence = pTame;
                      iTameSequence = iTame;
-                     ++pSearchPattern;
-                     ++iSearchPattern;
+                     iQCount = 0;
+
+                     while (*(++pSearchPattern) == '*')
+                     {
+                        ++iSearchPattern;
+                     }
                   }
                }
 
-               if (*pSearchPattern)  // "?*?" doesn't find "a".
+               if (!*pSearchPattern && !pWildMatch)
                {
-                   pTame = pTameMatch = pWildMatch = nullptr;
+                  pFirstMatch = pWildMatch = nullptr;
+
+                  if (ppTarget)    // "?*?" doesn't find "a".
+                  {
+                     *ppTarget = nullptr;
+                  }
+
+                  if (ppLast)
+                  {
+                     *ppLast = nullptr;
+                  }
                }
-               else                // "*?" finds "a".
+               else
                {
-                  CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
+                  if (ppTarget)    // "*?" finds "a".
+                  {
+                     *ppTarget = pTame;
+
+                     while (iQCount && CodePointBacktrackUtf8(
+                               (const uint8_t **) ppTarget, *ppFirst))
+                     {
+                        iQCount--;
+                     }
+                  }
+
+                  if (ppLast)
+                  {
+                     CodePointBacktrackUtf8((const uint8_t **) &pTame, 
+                         *ppFirst);
+                     *ppLast = pTame;
+                  }
                }
 
-               if (ppTarget) 
-               {
-                  *ppTarget = pTameSequence ? pTameSequence : pTame;
-               }
-
-               if (ppLast)
-               {
-                   *ppLast = pTame;
-               }
-
-               *ppFirst = pTameMatch;
+               *ppFirst = pFirstMatch;
                return pWildMatch;
             }
 
@@ -8145,36 +8421,29 @@ uint8_t * WildLenCaseFindUtf8(
          }
          else if (lenPattern <= iSearchPattern || !*pSearchPattern)
          {
+            while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+            {
+               continue;
+            }
+
             if (ppTarget)          // "*" finds "a".
             {
                *ppTarget = pTame;
-            }
 
-            while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
-            {
-                continue;
-            }
-
-            CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
-
-            if (ppLast)
-            {
-                *ppLast = pTame;
-            }
-
-            if (ppTarget)
-            {
-                *ppTarget = pTame;
-                iQCount--;
-
-                while (iQCount && CodePointBacktrackUtf8(
+               while (iQCount && CodePointBacktrackUtf8(
                          (const uint8_t **) ppTarget, *ppFirst))
-                {
-                    iQCount--;
-                }
+               {
+                  iQCount--;
+               }
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pWildMatch;
+            if (ppLast) 
+            {
+               CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
+               *ppLast = pTame;
+            }
+
+            *ppFirst = pFirstMatch ? pFirstMatch : pWildMatch;
             return pWildMatch;
          }
          else
@@ -8183,9 +8452,9 @@ uint8_t * WildLenCaseFindUtf8(
          }
       } while (true);
 
-      if (!pTameMatch)
+      if (!pFirstMatch)
       {
-         pTameMatch = pTame;
+         pFirstMatch = pTame;
       }
 
       pWild = (uint8_t *) pSearchPattern;
@@ -8225,7 +8494,7 @@ uint8_t * WildLenCaseFindUtf8(
          }
       } while (true);
 
-      pTameSequence = pWildMatch = pTameMatch = nullptr;
+      pTameSequence = pWildMatch = pFirstMatch = nullptr;
       pWild = (uint8_t *) pSearchPattern;
       iWild = iSearchPattern;
 
@@ -8242,7 +8511,7 @@ uint8_t * WildLenCaseFindUtf8(
                {
                   if (lenPattern <= ++iWild)
                   {
-                     if (ppLast)   // "ab*" finds "...ab".
+                     if (ppLast)   // "ab*" finds "ab".
                      {
                         *ppLast = pTame;
                         CodePointBacktrackUtf8(
@@ -8254,12 +8523,12 @@ uint8_t * WildLenCaseFindUtf8(
                         *ppTarget = pTame;
                      }
 
-                     *ppFirst = pTameMatch ? pTameMatch : pTame;
+                     *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                      return pWildMatch ? pWildMatch : pTame;
                   }
                }
 
-               if (ppLast)         // "*abcd" doesn't find "...abc".
+               if (ppLast)         // "abcd" doesn't find "abc".
                {
                   *ppLast = nullptr;
                }
@@ -8274,7 +8543,7 @@ uint8_t * WildLenCaseFindUtf8(
             }
             else if (pWildMatch)
             {
-               if (ppLast)         // "*abc" finds "...abc"..
+               if (ppLast)         // "*abc" finds "abc".
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -8285,25 +8554,25 @@ uint8_t * WildLenCaseFindUtf8(
                   *ppTarget = pTameSequence ? pTameSequence : pTame;
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                return pWildMatch;
             }
             else
             {
-                if (ppTarget)      // No wildcard found.
-                {
-                    *ppTarget = nullptr;
-                }
+               if (ppTarget)       // No wildcard found.
+               {
+                  *ppTarget = nullptr;
+               }
 
-                *ppFirst = nullptr;
-                return pWildMatch;
+               *ppFirst = nullptr;
+               return pWildMatch;
             }
          }
          else if (lenPattern <= iWild)
          {
-            if (pTameMatch)        // "a*c" doesn't find "...abcd".
+            if (pFirstMatch)       // "abc" doesn't find "abcd".
             {
-               pTame = pTameMatch;
+               pTame = pFirstMatch;
                iTame = iTameMatch;
             }
 
@@ -8329,25 +8598,26 @@ uint8_t * WildLenCaseFindUtf8(
                }
             }
 
-            if (!*pWild)
+            if (!*pWild)           // "ab*" finds "...abc".
             {
-               if (ppTarget)       // "ab*" finds "...abc".
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
+
+               while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+               {
+                   continue;
+               }
+
+               if (ppTarget)
                {
                   *ppTarget = pTame;
                }
 
                if (ppLast)
                {
-                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
-                  {
-                     continue;
-                  }
-
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
                return pWildMatch;
             }
 
@@ -8358,9 +8628,9 @@ uint8_t * WildLenCaseFindUtf8(
                {
                   if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                   {
-                     if (pTameMatch)  // "a*bc" doesn't find "...ab".
+                     if (pFirstMatch) // "a*bc" doesn't find "ab".
                      {
-                        pTame = pTameMatch;
+                        pTame = pFirstMatch;
                         CodePointAdvanceUtf8((const uint8_t **) &pTame);
                         iTame = 1 + iTameMatch;
                      }
@@ -8381,9 +8651,9 @@ uint8_t * WildLenCaseFindUtf8(
          }
          else if (!CodePointCaseCompareUtf8(pWild, pTame) && *pWild != '?')
          {
-            if (pTameMatch)        // "*abc" doesn't find "...abd".
+            if (pFirstMatch)       // "abc" doesn't find "abd".
             {
-               pTame = pTameMatch;
+               pTame = pFirstMatch;
                iTame = iTameMatch;
             }
 
@@ -8391,9 +8661,9 @@ uint8_t * WildLenCaseFindUtf8(
             iTame++;
             goto seek_pattern;
          }
-         else if (!pTameMatch)
+         else if (!pFirstMatch)
          {
-            pTameMatch = pTame;    // Got a prospective match.
+            pFirstMatch = pTame;   // Got prospective match on search pattern.
             iTameMatch = iTame;
          }
 
@@ -8422,7 +8692,7 @@ uint8_t * WildLenCaseFindUtf8(
          {
             if (lenPattern <= ++iWild)
             {
-               if (ppLast)         // "a*c*" finds "...abcd".
+               if (ppLast)         // "ab**c*" finds "abcd".
                {
                   *ppLast = pTame;
                   CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -8433,14 +8703,14 @@ uint8_t * WildLenCaseFindUtf8(
                   *ppTarget = pTame;
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                return pWildMatch;
             }
          }
 
          if (lenPattern <= iWild || !*pWild)
          {
-            if (ppTarget)          // "*bcd*" doesn't find "...abc".
+            if (ppTarget)          // "a*c*" finds "abcd".
             {
                *ppTarget = pTame;
             }
@@ -8456,13 +8726,13 @@ uint8_t * WildLenCaseFindUtf8(
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pTame;
+            *ppFirst = pFirstMatch ? pFirstMatch : pTame;
             return pWildMatch;
          }
 
          if (lenContent <= iTame || !*pTame)
          {
-            if (ppLast)            // "a*b*c" doesn't find "...ab".
+            if (ppLast)            // "*bcd*" doesn't find "abc".
             {
                *ppLast = nullptr;
             }
@@ -8483,9 +8753,9 @@ uint8_t * WildLenCaseFindUtf8(
             {
                if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
                {
-                  if (pTameMatch)      // "*bc" doesn't find "...abcd".
+                  if (pFirstMatch)     // "a*b*c" doesn't find "ab".
                   {
-                     pTame = pTameMatch;
+                     pTame = pFirstMatch;
                      iTame = iTameMatch;
                   }
 
@@ -8509,7 +8779,7 @@ uint8_t * WildLenCaseFindUtf8(
          // The equivalent portion of the upper loop is really simple.
          if (lenContent <= iTame || !*pTame)
          {
-            if (ppLast)            // "*bc" doesn't find "...abcd".
+            if (ppLast)            // "*bc" doesn't find "abcd".
             {
                *ppLast = nullptr;
             }
@@ -8548,7 +8818,7 @@ uint8_t * WildLenCaseFindUtf8(
                   {
                      CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppFirst);
 
-                     if (ppLast)   // "a*?" finds "...abcd".
+                     if (ppLast)   // "a*?" finds "abcd".
                      {
                         *ppLast = pTame;
                      }
@@ -8565,18 +8835,18 @@ uint8_t * WildLenCaseFindUtf8(
                         }
                      }
 
-                     *ppFirst = pTameMatch ? pTameMatch : pTame;
+                     *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                      return pWildMatch;
                   }
 
-                  if (ppLast)      // "a*?d" finds "...abcd".
+                  if (ppLast)      // "a*?d" finds "abcd".
                   {
                      *ppLast = pTameSequence;
                   }
                }
                else
                {
-                  if (ppLast)      // "a*c*d" finds "...abcd".
+                  if (ppLast)      // "a*c*d" finds "abcd".
                   {
                      *ppLast = pTame;
                      CodePointBacktrackUtf8((const uint8_t **) ppLast, 
@@ -8589,7 +8859,7 @@ uint8_t * WildLenCaseFindUtf8(
                   }
                }
 
-               *ppFirst = pTameMatch ? pTameMatch : pTame;
+               *ppFirst = pFirstMatch ? pFirstMatch : pTame;
                return pWildMatch;
             }
 			else
@@ -8629,7 +8899,7 @@ uint8_t * WildLenCaseFindUtf8(
             {
                if (lenContent <= ++iTameSequence || !*pTameSequence)
                {
-                  if (ppLast)      // "*a*b" doesn't find "...ac".
+                  if (ppLast)      // "*a*b" doesn't find "ac".
                   {
                      *ppLast = nullptr;
                   }
@@ -8649,7 +8919,7 @@ uint8_t * WildLenCaseFindUtf8(
          }
 		 else
          {
-            if (ppLast)            // "?a*" doesn't find "...ab".
+            if (ppLast)            // "?a*" doesn't find "ab".
             {
                *ppLast = nullptr;
             }
@@ -8669,7 +8939,7 @@ uint8_t * WildLenCaseFindUtf8(
       {
          if (lenPattern <= iWild || !*pWild)
          {
-            if (ppLast)            // "*bc" finds "...abc".
+            if (ppLast)            // "*bc" finds "abc".
             {
                *ppLast = pTame;
                CodePointBacktrackUtf8((const uint8_t **) ppLast, *ppFirst);
@@ -8680,12 +8950,12 @@ uint8_t * WildLenCaseFindUtf8(
                *ppTarget = pTameSequence ? pTameSequence : pTame;
             }
 
-            *ppFirst = pTameMatch ? pTameMatch : pTame;
+            *ppFirst = pFirstMatch ? pFirstMatch : pTame;
             return pWildMatch;
          }
          else
          {
-            if (ppLast)            // "*bcd" doesn't find "...abc".
+            if (ppLast)            // "*bcd" doesn't find "abc".
             {
                *ppLast = nullptr;
             }
@@ -8708,11 +8978,3662 @@ uint8_t * WildLenCaseFindUtf8(
    } while (true);
 }
 
-#if defined(__cplusplus)
+// Targeted wildcard search for slice.
+//
+// Given a pointer to UTF-8 content and pointers to the first and last code 
+// points of a search pattern that contains at least one '*' wildcard and 
+// that can include '?' wildcards, returns a pointer to any first matching 
+// slice and updates *ppEnd to point to the location immediately after it.
+// Returns nullptr if no match is found.
+//
+uint8_t * WildFindSliceUtf8(
+       uint8_t       **ppBegin,       // Updated location of content to search
+       const uint8_t *pPatternBegin,  // Specifier that may include wildcards
+       const uint8_t *pPatternEnd,    // End of specifier
+       uint8_t       **ppEnd,         // Returned location after end of match
+       uint8_t       **ppTarget)      // Returned location after last '*'
+{
+   uint8_t *pTame;           // Code point in content to search
+   uint8_t *pWild;           // Code point in search pattern
+   uint8_t *pFirstMatch;     // Prospective *ppBegin match in overall content
+   uint8_t *pWildMatch;      // Prospective match in content with '*' wildcard
+   uint8_t *pTameSequence;   // Prospective match in content after '*'
+   uint8_t *pWildSequence;   // Prospective match in pattern after '*'
+   int     iQCount;          // Length of target that consists of '?' wildcards
 
+   if (ppBegin && pPatternBegin && (pPatternEnd > pPatternBegin))
+   {
+      pTame = *ppBegin;
+   }
+   else
+   {
+      if (ppEnd)                  // Got empty input.
+      {
+         *ppEnd = nullptr;
+      }
+
+      if (ppTarget)
+      {
+         *ppTarget = nullptr;
+      }
+
+      return nullptr;
+   }
+
+   if (*pPatternBegin == '*' || *pPatternBegin == '?')
+   {
+      // The search pattern begins with a wildcard.  Set up for the fourth 
+	  // "do" loop and skip on down there.
+      iQCount = 0;
+      pFirstMatch = pWildMatch = pTameSequence = nullptr;
+
+      do
+      {
+         if (*pPatternBegin == '*')
+         {
+            if (!pWildMatch)
+            {
+                pWildMatch = pTame;
+            }
+
+            // Keep fallback positions for retry in case of incomplete match.
+            ++pPatternBegin;
+            pWildSequence = (uint8_t *) pPatternBegin;
+            pTameSequence = (uint8_t *) pTame;
+            iQCount = 0;
+         }
+         else if (*pPatternBegin == '?')
+         {
+            if (!pFirstMatch)
+            {
+               pFirstMatch = pTame;
+            }
+
+            ++iQCount;
+            ++pPatternBegin;
+            CodePointAdvanceUtf8((const uint8_t **) &pTame);
+
+            if (!*pTame || (ppEnd && pTame >= *ppEnd))
+            {
+               if (*pPatternBegin)
+               {
+                  if (*pPatternBegin == '*')
+                  {
+                     pTameSequence = pTame;
+                     iQCount = 0;
+
+                     while (*(++pPatternBegin) == '*')
+                     {
+                        continue;
+                     }
+                  }
+               }
+
+               if (!pWildMatch && (*pPatternBegin && pPatternBegin < pPatternEnd))
+               {
+                  pFirstMatch = pWildMatch = nullptr;
+
+                  if (ppTarget)    // "?*?" doesn't find "a".
+                  {
+                     *ppTarget = nullptr;
+                  }
+
+                  if (ppEnd)
+                  {
+                     *ppEnd = nullptr;
+                  }
+               }
+               else
+               {
+                  if (ppTarget)    // "*?" finds "a".
+                  {
+                     *ppTarget = pTame;
+
+                     while (iQCount && CodePointBacktrackUtf8(
+                         (const uint8_t **) ppTarget, *ppBegin))
+                     {
+                        iQCount--;
+                     }
+                  }
+
+                  if (ppEnd)
+                  {
+                     *ppEnd = pTame;
+                  }
+               }
+
+               *ppBegin = pFirstMatch;
+               return pWildMatch;
+            }
+
+            if (!pWildMatch)
+            {
+               pWildSequence = nullptr;
+            }
+         }
+         else if (!*pPatternBegin || pPatternBegin >= pPatternEnd)
+         {
+            while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                      (!ppEnd || pTame < *ppEnd))
+            {
+               continue;
+            }
+
+            if (ppEnd)             // "*" finds "a".
+            {
+               *ppEnd = pTame;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = pTame;
+
+               while (iQCount && CodePointBacktrackUtf8(
+                        (const uint8_t **) ppTarget, *ppBegin))
+               {
+                  iQCount--;
+               }
+            }
+
+            *ppBegin = pFirstMatch ? pFirstMatch : pWildMatch;
+            return pWildMatch;
+         }
+         else
+         {
+            break;
+         }
+      } while (true);
+
+      if (!pFirstMatch)
+      {
+         pFirstMatch = pTame;
+      }
+
+      pWild = (uint8_t *) pPatternBegin;
+      iQCount = 0;
+   }
+   else
+   {
+      // Find a code point in the content that matches the first non-'*' code 
+	  // point in the search pattern.
+      seek_pattern:
+      do
+      {
+         if (CodePointCompareUtf8(pPatternBegin, pTame))
+         {
+            break;
+         }
+
+         if (!CodePointAdvanceUtf8((const uint8_t **) &pTame) || 
+                      (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)
+            {
+               *ppEnd = nullptr;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = nullptr;
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+      } while (true);
+
+      pTameSequence = pWildMatch = pFirstMatch = nullptr;
+      pWild = (uint8_t *) pPatternBegin;
+      
+      // Find a first '*' wildcard, if one exists, and the beginning of any 
+      // prospectively matching sequence after it.
+      do
+      {
+         // Check for the end from the start.  Get out fast, if possible.
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (*pWild && pWild < pPatternEnd)
+            {
+               while (*pWild == '*')
+               {
+                  if (!(*(++pWild)) || pWild >= pPatternEnd)
+                  {
+                     if (ppEnd)   // "ab*" finds "ab".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     if (ppTarget)
+                     {
+                        *ppTarget = pTame;
+                     }
+
+                     *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+                     return pWildMatch ? pWildMatch : pTame;
+                  }
+               }
+      
+               if (ppEnd)         // "abcd" doesn't find "abc".
+               {
+                  *ppEnd = nullptr;
+               }
+
+               if (ppTarget)
+               {
+                  *ppTarget = nullptr;
+               }
+
+               *ppBegin = nullptr;
+               return nullptr;
+            }
+            else if (pWildMatch)
+            {
+               if (ppEnd)         // "*abc" finds "abc".
+               {
+                  *ppEnd = pTame;
+               }
+
+               if (ppTarget)
+               {
+                  *ppTarget = pTameSequence ? pTameSequence : pTame;
+               }
+
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+               return pWildMatch;
+            }
+            else
+            {
+               if (ppTarget)       // No wildcard found.
+               {
+                  *ppTarget = nullptr;
+               }
+
+               *ppBegin = nullptr;
+               return pWildMatch;
+            }
+         }
+         else if (*pWild == '*')
+         {
+            // Set up for the fourth "do" loop and skip on down there.
+            pWildMatch = pTame;
+
+            while (*(++pWild) == '*')
+            {
+               continue;
+            }
+
+            if (!*pWild || pWild >= pPatternEnd)  // "ab*" finds "abc".
+            {
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+
+               while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                   (!ppEnd || pTame < *ppEnd))
+               {
+                  continue;
+               }
+
+               if (ppTarget)
+               {
+                  *ppTarget = pTame;
+               }
+
+               if (ppEnd)
+               {
+                  *ppEnd = pTame;
+               }
+
+               return pWildMatch;
+            }
+
+            // Search for the next prospective match.
+            if (*pWild != '?')
+            {
+               while (!CodePointCompareUtf8(pWild, pTame))
+               {
+                  if (!CodePointAdvanceUtf8((const uint8_t **) &pTame) || 
+                      (ppEnd && pTame >= *ppEnd))
+                  {
+                     if (pFirstMatch)  // "a*bc" doesn't find "ab".
+                     {
+                        pTame = pFirstMatch;
+                        CodePointAdvanceUtf8((const uint8_t **) &pTame);
+                     }
+
+                     goto seek_pattern;
+                  }
+               }
+            }
+
+            // Keep fallback positions.
+            pWildSequence = pWild;
+            pTameSequence = pTame;
+            break;
+         }
+         else if (!CodePointCompareUtf8(pWild, pTame) && *pWild != '?')
+         {
+            if (pFirstMatch)           // "abc" doesn't find "abd".
+            {
+               pTame = pFirstMatch;
+            }
+
+            CodePointAdvanceUtf8((const uint8_t **) &pTame);
+            goto seek_pattern;
+         }
+         else if (!pFirstMatch)
+         {
+            pFirstMatch = pTame;       // Got prospective match on search pattern.
+         }
+
+         // Everything's a match, so far.
+         CodePointAdvanceUtf8((const uint8_t **) &pWild);
+         CodePointAdvanceUtf8((const uint8_t **) &pTame);
+      } while (true);
+   }
+
+   // Find any further wildcards and any further matching sequences.
+   do
+   {
+      if (*pWild == '*')
+      {
+         // Got wild again.
+         while (*(++pWild) == '*')
+         {
+            continue;
+         }
+
+         if (!pWildMatch)
+         {
+            pWildMatch = pTame;
+         }
+
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            if (ppTarget)          // "a*c*" finds "abcd".
+            {
+               *ppTarget = pTame;
+            }
+
+            if (ppEnd)
+            {
+               while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+               {
+                  continue;
+               }
+
+               *ppEnd = pTame;
+            }
+
+            *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+            return pWildMatch;
+         }
+
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)            // "*bcd*" doesn't find "abc".
+            {
+               *ppEnd = nullptr;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = nullptr;
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+
+         // Search for the next prospective match.
+         if (*pWild != '?')
+         {
+            while (!CodePointCompareUtf8(pWild, pTame))
+            {
+               if (!CodePointAdvanceUtf8((const uint8_t **) &pTame) || 
+                      (ppEnd && pTame >= *ppEnd))
+               {
+                  if (pFirstMatch)     // "a*b*c" doesn't find "ab".
+                  {
+                     pTame = pFirstMatch;
+                  }
+
+                  CodePointAdvanceUtf8((const uint8_t **) &pTame);
+                  goto seek_pattern;
+               }
+            }
+         }
+
+         // Keep the new fallback positions.
+         pWildSequence = (uint8_t *) pWild;
+         pTameSequence = (uint8_t *) pTame;
+      }
+      else if (!CodePointCompareUtf8(pWild, pTame) && *pWild != '?')
+      {
+         // The equivalent portion of the upper loop is really simple.
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)            // "*bc" doesn't find "abcd".
+            {
+               *ppEnd = nullptr;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = nullptr;
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            // A fine time for questions.
+            iQCount = 0;
+
+            if (pWildSequence)
+            {
+               while (*pWildSequence == '?')
+               {
+                  ++pWildSequence;
+                  ++iQCount;
+                  CodePointAdvanceUtf8((const uint8_t **) &pTameSequence);
+               }
+
+               if (!*pWildSequence)   
+               {
+                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                      (!ppEnd || pTame < *ppEnd))
+                  {
+                     continue;
+                  }
+
+                  if (iQCount)
+                  {
+                     if (ppEnd)   // "a*?" finds "abcd".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     if (ppTarget)
+                     {
+                        *ppTarget = pTame;
+                        iQCount--;
+
+                        while (iQCount && CodePointBacktrackUtf8(
+                           (const uint8_t **) ppTarget, *ppBegin))
+                        {
+                           iQCount--;
+                        }
+                     }
+
+                     *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+                     return pWildMatch;
+                  }
+
+                  if (ppEnd)      // "a*?d" finds "abcd".
+                  {
+                     *ppEnd = pTameSequence;
+                  }
+               }
+               else
+               {
+                  if (ppEnd)      // "a*c*d" finds "abcd".
+                  {
+                     *ppEnd = pTame;
+                  }
+
+                  if (ppTarget)
+                  {
+                     *ppTarget = pTameSequence;
+                  }
+               }
+
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+               return pWildMatch;
+            }
+			else
+            {
+               if (ppEnd)         // No wildcard found.
+               {
+                  *ppEnd = nullptr;
+               }
+
+               if (ppTarget)
+               {
+                  *ppTarget = nullptr;
+               }
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+
+         // Another fine time for questions.
+         if (pWildSequence)
+         {
+            while (*pWildSequence == '?')
+            {
+               CodePointAdvanceUtf8((const uint8_t **) &pWildSequence);
+               CodePointAdvanceUtf8((const uint8_t **) &pTameSequence);
+            }
+
+            // Fall back, but never so far again.
+            pWild = pWildSequence;
+
+            while (!CodePointAdvanceAndCompareUtf8(pWild,
+                      (const uint8_t **) &pTameSequence))
+            {
+               if (!*pTameSequence || (ppEnd && pTameSequence >= *ppEnd))
+               {
+                  if (ppEnd)      // "*a*b" doesn't find "ac".
+                  {
+                     *ppEnd = nullptr;
+                  }
+
+                  if (ppTarget)
+                  {
+                     *ppTarget = nullptr;
+                  }
+
+                  *ppBegin = nullptr;
+                  return nullptr;
+               }
+            }
+
+            pTame = pTameSequence;
+         }
+		 else
+         {
+            if (ppEnd)            // "?a*" doesn't find "ab".
+            {
+               *ppEnd = nullptr;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = nullptr;
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+      }
+
+      // Another check for the end, at the end.
+      if (!*pTame || (ppEnd && pTame >= *ppEnd))
+      {
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            if (ppEnd)            // "*bc" finds "abc".
+            {
+               *ppEnd = pTame;
+            }
+                  
+            if (ppTarget)
+            {
+               *ppTarget = pTameSequence ? pTameSequence : pTame;
+            }
+
+            *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+            return pWildMatch;
+         }
+         else
+         {
+            if (ppEnd)            // "*bcd" doesn't find "abc".
+            {
+               *ppEnd = nullptr;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = nullptr;
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+      }
+
+      // Everything's still a match.
+      CodePointAdvanceUtf8((const uint8_t **) &pWild);
+      CodePointAdvanceUtf8((const uint8_t **) &pTame);
+   } while (true);
+}
+
+// Targeted wildcard search for slice of pattern (case-insensitive).
+// See comments for WildFindSliceUtf8().  The wildcarded content comparison 
+// is performed with case folding, for a case-insensitive match.
+//
+uint8_t * WildCaseFindSliceUtf8(
+       uint8_t       **ppBegin,       // Updated location of content to search
+       const uint8_t *pPatternBegin,  // Specifier that may include wildcards
+       const uint8_t *pPatternEnd,    // End of specifier
+       uint8_t       **ppEnd,         // Returned location where match ends
+       uint8_t       **ppTarget)      // Returned location after last '*'
+{
+   uint8_t *pTame;           // Code point in content to search
+   uint8_t *pWild;           // Code point in search pattern
+   uint8_t *pFirstMatch;     // Prospective *ppBegin match in overall content
+   uint8_t *pWildMatch;      // Prospective match in content with '*' wildcard
+   uint8_t *pTameSequence;   // Prospective match in content after '*'
+   uint8_t *pWildSequence;   // Prospective match in pattern after '*'
+   int     iQCount;          // Length of target that consists of '?' wildcards
+
+   if (ppBegin && pPatternBegin && (pPatternEnd > pPatternBegin))
+   {
+      pTame = *ppBegin;
+   }
+   else
+   {
+      if (ppEnd)                  // Got empty input.
+      {
+         *ppEnd = nullptr;
+      }
+
+      if (ppTarget)
+      {
+         *ppTarget = nullptr;
+      }
+
+      return nullptr;
+   }
+
+   if (*pPatternBegin == '*' || *pPatternBegin == '?')
+   {
+      // The search pattern begins with a wildcard.  Set up for the fourth 
+	  // "do" loop and skip on down there.
+      iQCount = 0;
+      pFirstMatch = pWildMatch = pTameSequence = nullptr;
+
+      do
+      {
+         if (*pPatternBegin == '*')
+         {
+            if (!pWildMatch)
+            {
+                pWildMatch = pTame;
+            }
+
+            // Keep fallback positions for retry in case of incomplete match.
+            ++pPatternBegin;
+            pWildSequence = (uint8_t *) pPatternBegin;
+            pTameSequence = (uint8_t *) pTame;
+            iQCount = 0;
+         }
+         else if (*pPatternBegin == '?')
+         {
+            if (!pFirstMatch)
+            {
+               pFirstMatch = pTame;
+            }
+
+            ++iQCount;
+            ++pPatternBegin;
+            CodePointAdvanceUtf8((const uint8_t **) &pTame);
+
+            if (!*pTame || (ppEnd && pTame >= *ppEnd))
+            {
+               if (*pPatternBegin)
+               {
+                  if (*pPatternBegin == '*')
+                  {
+                     pTameSequence = pTame;
+                     iQCount = 0;
+
+                     while (*(++pPatternBegin) == '*')
+                     {
+                        continue;
+                     }
+                  }
+               }
+
+               if (!pWildMatch && (*pPatternBegin && pPatternBegin < pPatternEnd))
+               {
+                  pFirstMatch = pWildMatch = nullptr;
+
+                  if (ppTarget)    // "?*?" doesn't find "a".
+                  {
+                     *ppTarget = nullptr;
+                  }
+
+                  if (ppEnd)
+                  {
+                     *ppEnd = nullptr;
+                  }
+               }
+               else
+               {
+                  if (ppTarget)    // "*?" finds "a".
+                  {
+                     *ppTarget = pTame;
+
+                     while (iQCount && CodePointBacktrackUtf8(
+                         (const uint8_t **) ppTarget, *ppBegin))
+                     {
+                        iQCount--;
+                     }
+                  }
+
+                  if (ppEnd)
+                  {
+                     *ppEnd = pTame;
+                  }
+               }
+
+               *ppBegin = pFirstMatch;
+               return pWildMatch;
+            }
+
+            if (!pWildMatch)
+            {
+               pWildSequence = nullptr;
+            }
+         }
+         else if (!*pPatternBegin || pPatternBegin >= pPatternEnd)
+         {
+            while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                      (!ppEnd || pTame < *ppEnd))
+            {
+               continue;
+            }
+
+            if (ppEnd)             // "*" finds "a".
+            {
+               *ppEnd = pTame;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = pTame;
+
+               while (iQCount && CodePointBacktrackUtf8(
+                        (const uint8_t **) ppTarget, *ppBegin))
+               {
+                  iQCount--;
+               }
+            }
+
+            *ppBegin = pFirstMatch ? pFirstMatch : pWildMatch;
+            return pWildMatch;
+         }
+         else
+         {
+            break;
+         }
+      } while (true);
+
+      if (!pFirstMatch)
+      {
+         pFirstMatch = pTame;
+      }
+
+      pWild = (uint8_t *) pPatternBegin;
+      iQCount = 0;
+   }
+   else
+   {
+      // Find a code point in the content that matches the first non-'*' code 
+	  // point in the search pattern.
+      seek_pattern:
+      do
+      {
+         if (CodePointCaseCompareUtf8(pPatternBegin, pTame))
+         {
+            break;
+         }
+
+         if (!CodePointAdvanceUtf8((const uint8_t **) &pTame) || 
+                      (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)
+            {
+               *ppEnd = nullptr;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = nullptr;
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+      } while (true);
+
+      pTameSequence = pWildMatch = pFirstMatch = nullptr;
+      pWild = (uint8_t *) pPatternBegin;
+      
+      // Find a first '*' wildcard, if one exists, and the beginning of any 
+      // prospectively matching sequence after it.
+      do
+      {
+         // Check for the end from the start.  Get out fast, if possible.
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (*pWild && pWild < pPatternEnd)
+            {
+               while (*pWild == '*')
+               {
+                  if (!(*(++pWild)) || pWild >= pPatternEnd)
+                  {
+                     if (ppEnd)   // "ab*" finds "ab".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     if (ppTarget)
+                     {
+                        *ppTarget = pTame;
+                     }
+
+                     *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+                     return pWildMatch ? pWildMatch : pTame;
+                  }
+               }
+      
+               if (ppEnd)         // "abcd" doesn't find "abc".
+               {
+                  *ppEnd = nullptr;
+               }
+
+               if (ppTarget)
+               {
+                  *ppTarget = nullptr;
+               }
+
+               *ppBegin = nullptr;
+               return nullptr;
+            }
+            else if (pWildMatch)
+            {
+               if (ppEnd)         // "*abc" finds "abc".
+               {
+                  *ppEnd = pTame;
+               }
+
+               if (ppTarget)
+               {
+                  *ppTarget = pTameSequence ? pTameSequence : pTame;
+               }
+
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+               return pWildMatch;
+            }
+            else
+            {
+               if (ppTarget)       // No wildcard found.
+               {
+                  *ppTarget = nullptr;
+               }
+
+               *ppBegin = nullptr;
+               return pWildMatch;
+            }
+         }
+         else if (*pWild == '*')
+         {
+            // Set up for the fourth "do" loop and skip on down there.
+            pWildMatch = pTame;
+
+            while (*(++pWild) == '*')
+            {
+               continue;
+            }
+
+            if (!*pWild || pWild >= pPatternEnd)  // "ab*" finds "abc".
+            {
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+
+               while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                   (!ppEnd || pTame < *ppEnd))
+               {
+                  continue;
+               }
+
+               if (ppTarget)
+               {
+                  *ppTarget = pTame;
+               }
+
+               if (ppEnd)
+               {
+                  *ppEnd = pTame;
+               }
+
+               return pWildMatch;
+            }
+
+            // Search for the next prospective match.
+            if (*pWild != '?')
+            {
+               while (!CodePointCaseCompareUtf8(pWild, pTame))
+               {
+                  if (!CodePointAdvanceUtf8((const uint8_t **) &pTame) || 
+                      (ppEnd && pTame >= *ppEnd))
+                  {
+                     if (pFirstMatch)  // "a*bc" doesn't find "ab".
+                     {
+                        pTame = pFirstMatch;
+                        CodePointAdvanceUtf8((const uint8_t **) &pTame);
+                     }
+
+                     goto seek_pattern;
+                  }
+               }
+            }
+
+            // Keep fallback positions.
+            pWildSequence = pWild;
+            pTameSequence = pTame;
+            break;
+         }
+         else if (!CodePointCaseCompareUtf8(pWild, pTame) && *pWild != '?')
+         {
+            if (pFirstMatch)           // "abc" doesn't find "abd".
+            {
+               pTame = pFirstMatch;
+            }
+
+            CodePointAdvanceUtf8((const uint8_t **) &pTame);
+            goto seek_pattern;
+         }
+         else if (!pFirstMatch)
+         {
+            pFirstMatch = pTame;       // Got prospective match on search pattern.
+         }
+
+         // Everything's a match, so far.
+         CodePointAdvanceUtf8((const uint8_t **) &pWild);
+         CodePointAdvanceUtf8((const uint8_t **) &pTame);
+      } while (true);
+   }
+
+   // Find any further wildcards and any further matching sequences.
+   do
+   {
+      if (*pWild == '*')
+      {
+         // Got wild again.
+         while (*(++pWild) == '*')
+         {
+            continue;
+         }
+
+         if (!pWildMatch)
+         {
+            pWildMatch = pTame;
+         }
+
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            if (ppTarget)          // "a*c*" finds "abcd".
+            {
+               *ppTarget = pTame;
+            }
+
+            if (ppEnd)
+            {
+               while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+               {
+                  continue;
+               }
+
+               *ppEnd = pTame;
+            }
+
+            *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+            return pWildMatch;
+         }
+
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)            // "*bcd*" doesn't find "abc".
+            {
+               *ppEnd = nullptr;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = nullptr;
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+
+         // Search for the next prospective match.
+         if (*pWild != '?')
+         {
+            while (!CodePointCaseCompareUtf8(pWild, pTame))
+            {
+               if (!CodePointAdvanceUtf8((const uint8_t **) &pTame) || 
+                      (ppEnd && pTame >= *ppEnd))
+               {
+                  if (pFirstMatch)     // "a*b*c" doesn't find "ab".
+                  {
+                     pTame = pFirstMatch;
+                  }
+
+                  CodePointAdvanceUtf8((const uint8_t **) &pTame);
+                  goto seek_pattern;
+               }
+            }
+         }
+
+         // Keep the new fallback positions.
+         pWildSequence = (uint8_t *) pWild;
+         pTameSequence = (uint8_t *) pTame;
+      }
+      else if (!CodePointCaseCompareUtf8(pWild, pTame) && *pWild != '?')
+      {
+         // The equivalent portion of the upper loop is really simple.
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)            // "*bc" doesn't find "abcd".
+            {
+               *ppEnd = nullptr;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = nullptr;
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            // A fine time for questions.
+            iQCount = 0;
+
+            if (pWildSequence)
+            {
+               while (*pWildSequence == '?')
+               {
+                  ++pWildSequence;
+                  ++iQCount;
+                  CodePointAdvanceUtf8((const uint8_t **) &pTameSequence);
+               }
+
+               if (!*pWildSequence)   
+               {
+                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                      (!ppEnd || pTame < *ppEnd))
+                  {
+                     continue;
+                  }
+
+                  if (iQCount)
+                  {
+                     if (ppEnd)   // "a*?" finds "abcd".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     if (ppTarget)
+                     {
+                        *ppTarget = pTame;
+                        iQCount--;
+
+                        while (iQCount && CodePointBacktrackUtf8(
+                           (const uint8_t **) ppTarget, *ppBegin))
+                        {
+                           iQCount--;
+                        }
+                     }
+
+                     *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+                     return pWildMatch;
+                  }
+
+                  if (ppEnd)      // "a*?d" finds "abcd".
+                  {
+                     *ppEnd = pTameSequence;
+                  }
+               }
+               else
+               {
+                  if (ppEnd)      // "a*c*d" finds "abcd".
+                  {
+                     *ppEnd = pTame;
+                  }
+
+                  if (ppTarget)
+                  {
+                     *ppTarget = pTameSequence;
+                  }
+               }
+
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+               return pWildMatch;
+            }
+			else
+            {
+               if (ppEnd)         // No wildcard found.
+               {
+                  *ppEnd = nullptr;
+               }
+
+               if (ppTarget)
+               {
+                  *ppTarget = nullptr;
+               }
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+
+         // Another fine time for questions.
+         if (pWildSequence)
+         {
+            while (*pWildSequence == '?')
+            {
+               CodePointAdvanceUtf8((const uint8_t **) &pWildSequence);
+               CodePointAdvanceUtf8((const uint8_t **) &pTameSequence);
+            }
+
+            // Fall back, but never so far again.
+            pWild = pWildSequence;
+
+            while (!CodePointAdvanceAndCaseCompareUtf8(pWild,
+                      (const uint8_t **) &pTameSequence))
+            {
+               if (!*pTameSequence || (ppEnd && pTameSequence >= *ppEnd))
+               {
+                  if (ppEnd)      // "*a*b" doesn't find "ac".
+                  {
+                     *ppEnd = nullptr;
+                  }
+
+                  if (ppTarget)
+                  {
+                     *ppTarget = nullptr;
+                  }
+
+                  *ppBegin = nullptr;
+                  return nullptr;
+               }
+            }
+
+            pTame = pTameSequence;
+         }
+		 else
+         {
+            if (ppEnd)            // "?a*" doesn't find "ab".
+            {
+               *ppEnd = nullptr;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = nullptr;
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+      }
+
+      // Another check for the end, at the end.
+      if (!*pTame || (ppEnd && pTame >= *ppEnd))
+      {
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            if (ppEnd)            // "*bc" finds "abc".
+            {
+               *ppEnd = pTame;
+            }
+                  
+            if (ppTarget)
+            {
+               *ppTarget = pTameSequence ? pTameSequence : pTame;
+            }
+
+            *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+            return pWildMatch;
+         }
+         else
+         {
+            if (ppEnd)            // "*bcd" doesn't find "abc".
+            {
+               *ppEnd = nullptr;
+            }
+
+            if (ppTarget)
+            {
+               *ppTarget = nullptr;
+            }
+
+            *ppBegin = nullptr;
+            return nullptr;
+         }
+      }
+
+      // Everything's still a match.
+      CodePointAdvanceUtf8((const uint8_t **) &pWild);
+      CodePointAdvanceUtf8((const uint8_t **) &pTame);
+   } while (true);
+}
+
+#if defined(__cplusplus)
+//
+// Vectorized wildcard search.
+//
+
+// Given UTF-8 content and a wildcard-containing UTF-8 search pattern, 
+// searches the content for a match, starting at the location pointed to by 
+// ppBegin.  If a match is found, sets *ppBegin and *ppEnd, and populates 
+// pTargets, as follows...
+//
+// *ppBegin will point to the location within the content where the overall 
+//   match begins, or if no match is found, to the initial location pointed 
+//   to by ppEnd,
+// *ppEnd will point to the location immediately after the overall match 
+//   ends, and
+// pTargets will point to a container of target match results, based on 
+//  std::array, where each target comprises a pBegin pointer to first code 
+//  point of of a portion of the content that matches a '*' wildcard, and a 
+//  pEnd pointer to the code point immediately after that match
+//
+// ...and returns a to pointer to the location where the first '*' wildcard 
+// match begins, i.e., the content corresponding to the first '*' wildcard.
+// If no match is found, or if the search pattern contains no '*' wildcard, 
+// or if the pattern contains greater than MAX_MATCHES wildcards,sets *ppEnd 
+// and the first WildTarget pair to nullptr and returns nullptr. 
+//
+uint8_t * FastUtf8::WildVectorize(
+     uint8_t       **ppBegin,        // Updated location of content to search
+     uint8_t       **ppEnd,          // Updated location where search ends
+     const uint8_t *pPatternBegin,   // Specifier that includes wildcards
+     const uint8_t *pPatternEnd,     // End of specifier
+     FastUtf8::MatchVector& pTargets)   // Populated matches
+{
+   uint8_t *pTame;          // Code point in content to search
+   uint8_t *pWild;          // Code point in search pattern
+   uint8_t *pFirstMatch;    // Prospective *ppBegin match in overall content
+   uint8_t *pWildMatch;     // Prospective match with '*' wildcard
+   uint8_t *pFirstWildMatch;  // Prospective match with first '*' wildcard
+   uint8_t *pTameSequence;  // Prospective match after '*'
+   uint8_t *pWildSequence;  // Location after '*' in pattern
+   uint8_t *pEndOriginal;   // Original location pointed to by *ppEnd
+   int     iQCount;         // Length of target that consists of '?' wildcards
+   int     iMatch;          // pTargets selector
+
+   if (ppBegin && ppEnd && pPatternBegin && 
+                      pPatternEnd > pPatternBegin && *ppEnd > *ppBegin)
+   {
+      pTame = *ppBegin;
+      pEndOriginal = ppEnd ? *ppEnd : nullptr;
+   }
+   else
+   {
+      if (ppEnd)                  // Got empty input.
+      {
+         *ppEnd = nullptr;
+      }
+
+      pTargets.matches.at(0).pBegin = pTargets.matches.at(0).pEnd = nullptr;
+      return nullptr;
+   }
+
+   pFirstMatch = nullptr;
+
+   if (*pPatternBegin == '*' || *pPatternBegin == '?')
+   {
+      // The search pattern begins with a wildcard.  Set up for the fourth 
+	  // "do" loop and skip on down there.
+      iQCount = iMatch = 0;
+      pWildMatch = pFirstWildMatch = pTameSequence = pWildSequence = nullptr;
+
+      do
+      {
+         if (*pPatternBegin == '*')
+         {
+            do
+            {
+               if (pWildMatch)
+               {
+                  if (iMatch >= (int) MAX_MATCHES - 1)
+                  {
+                     if (ppEnd)
+                     {
+                        *ppEnd = nullptr;
+                     }
+
+                     pTargets.matches.at(0).pBegin = 
+                         pTargets.matches.at(0).pEnd = nullptr;
+                     *ppBegin = pEndOriginal;
+                     return nullptr;
+                  }
+
+                  pTargets.matches.at(iMatch++).pEnd = pTame;
+               }
+               else
+               {
+                  pWildMatch = pTame;
+
+                  if (!pFirstWildMatch)
+                  {
+                     pFirstWildMatch = pWildMatch;
+                  }
+               }
+
+               pTargets.matches.at(iMatch).pBegin = pTame;
+            } while (*(++pPatternBegin) == '*');
+
+            if (!pFirstMatch)
+            {
+               pFirstMatch = pTame;
+            }
+
+            // Keep fallback positions for retry in case of incomplete match.
+            pWildSequence = (uint8_t *) pPatternBegin;
+            pTameSequence = pTame;
+            iQCount = 0;
+
+            if (*pPatternBegin != '?')
+            {
+               break;
+            }
+         }
+         else if (*pPatternBegin == '?')
+         {
+            if (!pFirstMatch)
+            {
+               pFirstMatch = pTame;
+            }
+
+            ++iQCount;
+            ++pPatternBegin;
+            CodePointAdvanceUtf8((const uint8_t **) &pTame);
+
+            if (!*pTame || (ppEnd && pTame >= *ppEnd))
+            {
+               if (*pPatternBegin)
+               {
+                  if (*pPatternBegin == '*')
+                  {
+                     do
+                     {
+                        if (iMatch >= (int) MAX_MATCHES - 1)
+                        {
+                           if (ppEnd)
+                           {
+                              *ppEnd = nullptr;
+                           }
+
+                           pTargets.matches.at(0).pBegin = 
+                               pTargets.matches.at(0).pEnd = nullptr;
+                           *ppBegin = pEndOriginal;
+                           return nullptr;
+                        }
+
+                        pTargets.matches.at(iMatch++).pEnd = pTame;
+                        pTargets.matches.at(iMatch).pBegin = pTame;
+                     } while (*(++pPatternBegin) == '*');
+
+                     if (*pPatternBegin)
+                     {
+                        if (ppEnd)  // "*?*c" doesn't find "ab".
+                        {
+                           *ppEnd = nullptr;
+                        }
+
+                        pTargets.matches.at(0).pBegin = 
+                            pTargets.matches.at(0).pEnd = nullptr;
+                        *ppBegin = pEndOriginal;
+                        return nullptr;
+                     }
+
+                     if (ppEnd)    // "*?*" finds "ab".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     *ppBegin = pFirstMatch;
+                     pTargets.matches.at(iMatch).pEnd = pTame;
+                     return pFirstWildMatch;
+                  }
+               }
+
+               if (!pWildMatch)
+               {
+                  if (*pPatternBegin && pPatternBegin < pPatternEnd)
+                  {
+                     if (ppEnd)       // "?*?" doesn't find "a".
+                     {
+                        *ppEnd = nullptr;
+                     }
+
+                     *ppBegin = pEndOriginal;
+                     pTargets.matches.at(0).pBegin = 
+                         pTargets.matches.at(0).pEnd = nullptr;
+                     return nullptr;
+                  }
+                  else
+                  {
+                     if (ppEnd)       // "*?" finds "a".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     while (iQCount && CodePointBacktrackUtf8(
+                            (const uint8_t **) &pTame, *ppBegin))
+                     {
+                        iQCount--;
+                     }
+
+                     *ppBegin = pFirstMatch;
+                     pTargets.matches.at(iMatch).pEnd = pTame;
+                     return pFirstWildMatch;
+                  }
+
+                  pWildSequence = nullptr;
+               }
+               else
+               {
+                  pWildMatch = nullptr;
+                  pTargets.matches.at(iMatch).pEnd = pTame;
+
+                  while (iQCount && CodePointBacktrackUtf8(
+                            (const uint8_t **) &pTargets.matches.at(iMatch).pEnd, 
+                            *ppBegin))
+                  {
+                     iQCount--;
+                  }
+               }
+            }
+         }
+         else if (!*pPatternBegin || pPatternBegin >= pPatternEnd)
+         {
+            // "*" finds "a".
+            while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                      (!ppEnd || pTame < *ppEnd))
+            {
+                continue;
+            }
+
+            if (pWildMatch)
+            {
+               pTargets.matches.at(iMatch).pEnd = pTame;
+
+               while (iQCount && CodePointBacktrackUtf8(
+                         (const uint8_t **) &pTargets.matches.at(iMatch).pEnd, 
+                         *ppBegin))
+               {
+                  iQCount--;
+               }
+            }
+
+            if (ppEnd)
+            {
+               *ppEnd = pTame;
+            }
+
+            *ppBegin = pTargets.matches.at(iMatch).pBegin = pFirstMatch ? 
+                          pFirstMatch : pWildMatch;
+            return pFirstWildMatch;
+         }
+         else
+         {
+            pWildMatch = nullptr;
+            break;
+         }
+      } while (true);
+
+      pWild = (uint8_t *) pPatternBegin;
+      iQCount = 0;
+   }
+   else
+   {
+      // Find a code point in the content that matches the first non-'*' code 
+	  // point in the search pattern.
+      seek_pattern:
+      iMatch = 0;
+
+      do
+      {
+         if (CodePointCompareUtf8(pPatternBegin, pTame))
+         {
+            break;
+         }
+
+         if (!CodePointAdvanceUtf8((const uint8_t **) &pTame) || 
+                      (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+      } while (true);
+
+      pTameSequence = pWildMatch = pFirstWildMatch = nullptr;
+      pWild = (uint8_t *) pPatternBegin;
+      
+      // Find a first '*' wildcard, if one exists, and the beginning of any 
+      // prospectively matching sequence after it.
+      do
+      {
+         // Check for the end from the start.  Get out fast, if possible.
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (*pWild && pWild < pPatternEnd)
+            {
+               while (*pWild == '*')
+               {
+                  if (!(*(++pWild)))
+                  {
+                     if (ppEnd)   // "ab*" finds "ab".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     pTargets.matches.at(0).pEnd = pTame;
+                     *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+                     return pFirstWildMatch ? pFirstWildMatch : pTame;
+                  }
+                  else
+                  {
+                     if (iMatch >= (int) MAX_MATCHES - 1)
+                     {
+                        if (ppEnd)
+                        {
+                           *ppEnd = nullptr;
+                        }
+
+                        pTargets.matches.at(0).pBegin = 
+                            pTargets.matches.at(0).pEnd = nullptr;
+                        *ppBegin = pEndOriginal;
+                        return nullptr;
+                     }
+
+                     pTargets.matches.at(iMatch++).pEnd = pTameSequence ? 
+                         pTameSequence : pTame;
+                     pTargets.matches.at(iMatch).pBegin = pTame;
+                  }
+               }
+      
+               if (ppEnd)         // "abcd" doesn't find "abc".
+               {
+                  *ppEnd = nullptr;
+               }
+
+               pTargets.matches.at(0).pBegin = pTargets.matches.at(0).pEnd = 
+                      nullptr;
+               *ppBegin = pEndOriginal;
+               return nullptr;
+            }
+            else if (pWildMatch)
+            {
+               if (ppEnd)         // "*abc" finds "abc".
+               {
+                  *ppEnd = pTame;
+               }
+
+               pTargets.matches.at(iMatch).pEnd = pTameSequence ? 
+                      pTameSequence : pTame;
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+               return pFirstWildMatch ? pFirstWildMatch : pTame;
+            }
+            else
+            {
+               pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+               *ppBegin = pEndOriginal;  // No wildcard found.
+               return pFirstWildMatch;
+            }
+         }
+         else if (*pWild == '*')
+         {
+            // Set up for the fourth "do" loop and skip on down there.
+            pTargets.matches.at(iMatch).pBegin = pWildMatch = pTame;
+
+            if (!pFirstWildMatch)
+            {
+               pFirstWildMatch = pWildMatch;
+            }
+
+            while (*(++pWild) == '*')
+            {
+               if (iMatch >= (int) MAX_MATCHES - 1)
+               {
+                  if (ppEnd)
+                  {
+                     *ppEnd = nullptr;
+                  }
+
+                  pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+                  *ppBegin = pEndOriginal;
+                  return nullptr;
+               }
+
+               pTargets.matches.at(iMatch++).pEnd = pTameSequence ? 
+                      pTameSequence : pTame;
+               pTargets.matches.at(iMatch).pBegin = pTame;
+            }
+
+            if (!*pWild || pWild >= pPatternEnd)
+            {
+               if (ppEnd)          // "ab*" finds "abc".
+               {
+                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+                  {
+                     continue;
+                  }
+
+                  *ppEnd = pTame;
+               }
+
+               pTargets.matches.at(iMatch).pEnd = pTame;
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+               return pFirstWildMatch;
+            }
+
+            // Search for the next prospective match.
+            if (*pWild != '?')
+            {
+               while (!CodePointCompareUtf8(pWild, pTame))
+               {
+                  if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
+                  {
+                     if (pFirstMatch)  // "a*bc" doesn't find "ab".
+                     {
+                        pTame = pFirstMatch;
+                        CodePointAdvanceUtf8((const uint8_t **) &pTame);
+                     }
+
+                     goto seek_pattern;
+                  }
+               }
+            }
+
+            // Keep fallback positions.
+            pWildSequence = pWild;
+            pTameSequence = pTame;
+            break;
+         }
+         else if (!CodePointCompareUtf8(pWild, pTame) && *pWild != '?')
+         {
+            if (pFirstMatch)           // "*abc" doesn't find "abd".
+            {
+               pTame = pFirstMatch;
+               pFirstMatch = nullptr;
+            }
+
+            CodePointAdvanceUtf8((const uint8_t **) &pTame);
+            goto seek_pattern;
+         }
+         else if (!pFirstMatch)
+         {
+            pFirstMatch = pTame;       // Got prospective match on search pattern.
+         }
+
+         // Everything's a match, so far.
+         CodePointAdvanceUtf8((const uint8_t **) &pWild);
+         CodePointAdvanceUtf8((const uint8_t **) &pTame);
+      } while (true);
+   }
+
+   // Find any further wildcards and any further matching sequences.
+   do
+   {
+      if (*pWild == '*')
+      {
+         // Got wild again.
+         while (*(++pWild) == '*')
+         {
+            if (iMatch >= (int) MAX_MATCHES - 1)
+            {
+               if (ppEnd)
+               {
+                  *ppEnd = nullptr;
+               }
+
+               pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+               *ppBegin = pEndOriginal;
+               return nullptr;
+            }
+
+            pTargets.matches.at(iMatch++).pEnd = pTame;
+            pTargets.matches.at(iMatch).pBegin = pTame;
+         }
+
+         if (iMatch >= (int) MAX_MATCHES - 1)
+         {
+            if (ppEnd)
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+
+         if (pWildMatch)
+         {
+            pTargets.matches.at(iMatch++).pEnd = pTameSequence ? 
+                      pTameSequence : pTame;
+            pTargets.matches.at(iMatch).pBegin = pTame;
+         }
+         else
+         {
+            pWildMatch = pTame;
+
+            if (!pFirstWildMatch)
+            {
+               pFirstWildMatch = pWildMatch;
+            }
+            else if (!iMatch)
+            {
+               pTargets.matches.at(iMatch).pBegin = pFirstMatch;
+               pTargets.matches.at(iMatch++).pEnd = pTameSequence ? 
+                         pTameSequence : pTame;
+            }
+         }
+
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            if (*pTame)
+            {
+               pTargets.matches.at(iMatch).pEnd = pTame;
+
+               if (ppEnd)                 // "a*d" finds "abcd".
+               {
+                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                         pTame < *ppEnd)
+                  {
+                     continue;
+                  }
+
+                  *ppEnd = pTame;
+               }
+            }
+            else
+            {
+               while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                      pTame < *ppEnd)
+               {
+                  continue;
+               }
+
+               pTargets.matches.at(iMatch).pEnd = pTame;
+
+               if (ppEnd)                 // "a*c*" finds "abcd".
+               {
+                  *ppEnd = pTame;
+               }
+            }
+
+            *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+            return pFirstWildMatch;
+         }
+
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)            // "*bcd*" doesn't find "abc".
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+
+         // Search for the next prospective match.
+         if (*pWild != '?')
+         {
+            while (!CodePointCompareUtf8(pWild, pTame))
+            {
+               if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
+               {
+                  if (pFirstMatch)     // "a*b*c" doesn't find "ab".
+                  {
+                     pTame = pFirstMatch;
+                     pFirstMatch = nullptr;
+                  }
+
+                  CodePointAdvanceUtf8((const uint8_t **) &pTame);
+                  goto seek_pattern;
+               }
+            }
+         }
+
+         // Keep the new fallback positions.
+         pWildSequence = pWild;
+         pTameSequence = pTame;
+      }
+      else if (!CodePointCompareUtf8(pWild, pTame) && *pWild != '?')
+      {
+         // The equivalent portion of the upper loop is really simple.
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)            // "*bc" doesn't find "abcd".
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            // A fine time for questions.
+            iQCount = 0;
+
+            if (pWildSequence)
+            {
+               while (*pWildSequence == '?')
+               {
+                  ++pWildSequence;
+                  ++iQCount;
+                  CodePointAdvanceUtf8((const uint8_t **) &pTameSequence);
+               }
+
+               if (!*pWildSequence || pWildSequence >= pPatternEnd)   
+               {
+                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                      (!ppEnd || pTame < *ppEnd))
+                  {
+                     continue;
+                  }
+
+                  if (iQCount)
+                  {
+                     CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppBegin);
+                     pTargets.matches.at(iMatch).pEnd = pTame;
+
+                     if (ppEnd)   // "a*?" finds "abcd".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+                     return pWildMatch ? pWildMatch : pFirstMatch;
+                  }
+
+                  if (ppEnd)      // "a*?d" finds "abcd".
+                  {
+                     *ppEnd = pTameSequence ? pTameSequence : pTame;
+                  }
+               }
+               else
+               {
+                  if (ppEnd)      // "a*c*d" finds "abcd".
+                  {
+                     *ppEnd = pTame;
+                  }
+
+                  pTargets.matches.at(iMatch).pEnd = pTameSequence ? 
+                      pTameSequence : pTame;
+               }
+
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+               return pFirstWildMatch;
+            }
+			else
+            {
+               if (ppEnd)         // No wildcard found.
+               {
+                  *ppEnd = nullptr;
+               }
+
+               pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            }
+
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+
+         // Another fine time for questions.
+         if (pWildSequence && pWildSequence < pPatternEnd)
+         {
+            while (*pWildSequence == '?')
+            {
+               CodePointAdvanceUtf8((const uint8_t **) &pWildSequence);
+               CodePointAdvanceUtf8((const uint8_t **) &pTameSequence);
+            }
+
+            // Fall back, but never so far again.
+            pWild = pWildSequence;
+
+            while (!CodePointAdvanceAndCompareUtf8(pWild,
+                      (const uint8_t **) &pTameSequence))
+            {
+               if (!*pTameSequence || (ppEnd && pTameSequence >= *ppEnd))
+               {
+                  if (ppEnd)      // "*a*b" doesn't find "ac".
+                  {
+                     *ppEnd = nullptr;
+                  }
+
+                  pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+                  *ppBegin = pEndOriginal;
+                  return nullptr;
+               }
+            }
+
+            pTame = pTameSequence;
+         }
+		 else
+         {
+            if (ppEnd)            // "?a*" doesn't find "ab".
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+      }
+
+      // Another check for the end, at the end.
+      if (!*pTame || (ppEnd && pTame >= *ppEnd))
+      {
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            if (ppEnd)            // "*bc" finds "abc".
+            {
+               *ppEnd = pTame;
+            }
+
+            pTargets.matches.at(iMatch).pEnd = pTameSequence ? 
+                      pTameSequence : pTame;
+            *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+            return pFirstWildMatch;
+         }
+         else
+         {
+            if (ppEnd)            // "*bcd" doesn't find "abc".
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+      }
+
+      // Everything's still a match.
+      CodePointAdvanceUtf8((const uint8_t **) &pWild);
+      CodePointAdvanceUtf8((const uint8_t **) &pTame);
+   } while (true);
+}
+
+// Vectorized wildcard search (case-insensitive).
+// See comments for WildVectorize().  Content comparison is performed with 
+// case folding.
+//
+uint8_t * FastUtf8::WildCaseVectorize(
+     uint8_t       **ppBegin,        // Updated location of content to search
+     uint8_t       **ppEnd,          // Updated location where search ends
+     const uint8_t *pPatternBegin,   // Specifier that includes wildcards
+     const uint8_t *pPatternEnd,     // End of specifier
+     FastUtf8::MatchVector& pTargets)   // Populated matches
+{
+   uint8_t *pTame;          // Code point in content to search
+   uint8_t *pWild;          // Code point in search pattern
+   uint8_t *pFirstMatch;    // Prospective *ppBegin match in overall content
+   uint8_t *pWildMatch;     // Prospective match with '*' wildcard
+   uint8_t *pFirstWildMatch;  // Prospective match with first '*' wildcard
+   uint8_t *pTameSequence;  // Prospective match after '*'
+   uint8_t *pWildSequence;  // Location after '*' in pattern
+   uint8_t *pEndOriginal;   // Original location pointed to by *ppEnd
+   int     iQCount;         // Length of target that consists of '?' wildcards
+   int     iMatch;          // pTargets selector
+
+   if (ppBegin && ppEnd && pPatternBegin && 
+                      pPatternEnd > pPatternBegin && *ppEnd > *ppBegin)
+   {
+      pTame = *ppBegin;
+      pEndOriginal = ppEnd ? *ppEnd : nullptr;
+   }
+   else
+   {
+      if (ppEnd)                  // Got empty input.
+      {
+         *ppEnd = nullptr;
+      }
+
+      pTargets.matches.at(0).pBegin = pTargets.matches.at(0).pEnd = nullptr;
+      return nullptr;
+   }
+
+   pFirstMatch = nullptr;
+
+   if (*pPatternBegin == '*' || *pPatternBegin == '?')
+   {
+      // The search pattern begins with a wildcard.  Set up for the fourth 
+	  // "do" loop and skip on down there.
+      iQCount = iMatch = 0;
+      pWildMatch = pFirstWildMatch = pTameSequence = pWildSequence = nullptr;
+
+      do
+      {
+         if (*pPatternBegin == '*')
+         {
+            do
+            {
+               if (pWildMatch)
+               {
+                  if (iMatch >= (int) MAX_MATCHES - 1)
+                  {
+                     if (ppEnd)
+                     {
+                        *ppEnd = nullptr;
+                     }
+
+                     pTargets.matches.at(0).pBegin = 
+                         pTargets.matches.at(0).pEnd = nullptr;
+                     *ppBegin = pEndOriginal;
+                     return nullptr;
+                  }
+
+                  pTargets.matches.at(iMatch++).pEnd = pTame;
+               }
+               else
+               {
+                  pWildMatch = pTame;
+
+                  if (!pFirstWildMatch)
+                  {
+                     pFirstWildMatch = pWildMatch;
+                  }
+               }
+
+               pTargets.matches.at(iMatch).pBegin = pTame;
+            } while (*(++pPatternBegin) == '*');
+
+            if (!pFirstMatch)
+            {
+               pFirstMatch = pTame;
+            }
+
+            // Keep fallback positions for retry in case of incomplete match.
+            pWildSequence = (uint8_t *) pPatternBegin;
+            pTameSequence = pTame;
+            iQCount = 0;
+
+            if (*pPatternBegin != '?')
+            {
+               break;
+            }
+         }
+         else if (*pPatternBegin == '?')
+         {
+            if (!pFirstMatch)
+            {
+               pFirstMatch = pTame;
+            }
+
+            ++iQCount;
+            ++pPatternBegin;
+            CodePointAdvanceUtf8((const uint8_t **) &pTame);
+
+            if (!*pTame || (ppEnd && pTame >= *ppEnd))
+            {
+               if (*pPatternBegin)
+               {
+                  if (*pPatternBegin == '*')
+                  {
+                     do
+                     {
+                        if (iMatch >= (int) MAX_MATCHES - 1)
+                        {
+                           if (ppEnd)
+                           {
+                              *ppEnd = nullptr;
+                           }
+
+                           pTargets.matches.at(0).pBegin = 
+                               pTargets.matches.at(0).pEnd = nullptr;
+                           *ppBegin = pEndOriginal;
+                           return nullptr;
+                        }
+
+                        pTargets.matches.at(iMatch++).pEnd = pTame;
+                        pTargets.matches.at(iMatch).pBegin = pTame;
+                     } while (*(++pPatternBegin) == '*');
+
+                     if (*pPatternBegin)
+                     {
+                        if (ppEnd)  // "*?*c" doesn't find "ab".
+                        {
+                           *ppEnd = nullptr;
+                        }
+
+                        pTargets.matches.at(0).pBegin = 
+                            pTargets.matches.at(0).pEnd = nullptr;
+                        *ppBegin = pEndOriginal;
+                        return nullptr;
+                     }
+
+                     if (ppEnd)    // "*?*" finds "ab".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     *ppBegin = pFirstMatch;
+                     pTargets.matches.at(iMatch).pEnd = pTame;
+                     return pFirstWildMatch;
+                  }
+               }
+
+               if (!pWildMatch)
+               {
+                  if (*pPatternBegin && pPatternBegin < pPatternEnd)
+                  {
+                     if (ppEnd)       // "?*?" doesn't find "a".
+                     {
+                        *ppEnd = nullptr;
+                     }
+
+                     *ppBegin = pEndOriginal;
+                     pTargets.matches.at(0).pBegin = 
+                         pTargets.matches.at(0).pEnd = nullptr;
+                     return nullptr;
+                  }
+                  else
+                  {
+                     if (ppEnd)       // "*?" finds "a".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     while (iQCount && CodePointBacktrackUtf8(
+                            (const uint8_t **) &pTame, *ppBegin))
+                     {
+                        iQCount--;
+                     }
+
+                     *ppBegin = pFirstMatch;
+                     pTargets.matches.at(iMatch).pEnd = pTame;
+                     return pFirstWildMatch;
+                  }
+
+                  pWildSequence = nullptr;
+               }
+               else
+               {
+                  pWildMatch = nullptr;
+                  pTargets.matches.at(iMatch).pEnd = pTame;
+
+                  while (iQCount && CodePointBacktrackUtf8(
+                            (const uint8_t **) &pTargets.matches.at(iMatch).pEnd, 
+                            *ppBegin))
+                  {
+                     iQCount--;
+                  }
+               }
+            }
+         }
+         else if (!*pPatternBegin || pPatternBegin >= pPatternEnd)
+         {
+            // "*" finds "a".
+            while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                      (!ppEnd || pTame < *ppEnd))
+            {
+                continue;
+            }
+
+            if (pWildMatch)
+            {
+               pTargets.matches.at(iMatch).pEnd = pTame;
+
+               while (iQCount && CodePointBacktrackUtf8(
+                         (const uint8_t **) &pTargets.matches.at(iMatch).pEnd, 
+                         *ppBegin))
+               {
+                  iQCount--;
+               }
+            }
+
+            if (ppEnd)
+            {
+               *ppEnd = pTame;
+            }
+
+            *ppBegin = pTargets.matches.at(iMatch).pBegin = pFirstMatch ? 
+                          pFirstMatch : pWildMatch;
+            return pFirstWildMatch;
+         }
+         else
+         {
+            pWildMatch = nullptr;
+            break;
+         }
+      } while (true);
+
+      pWild = (uint8_t *) pPatternBegin;
+      iQCount = 0;
+   }
+   else
+   {
+      // Find a code point in the content that matches the first non-'*' code 
+	  // point in the search pattern.
+      seek_pattern:
+      iMatch = 0;
+
+      do
+      {
+         if (CodePointCaseCompareUtf8(pPatternBegin, pTame))
+         {
+            break;
+         }
+
+         if (!CodePointAdvanceUtf8((const uint8_t **) &pTame) || 
+                      (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+      } while (true);
+
+      pTameSequence = pWildMatch = pFirstWildMatch = nullptr;
+      pWild = (uint8_t *) pPatternBegin;
+      
+      // Find a first '*' wildcard, if one exists, and the beginning of any 
+      // prospectively matching sequence after it.
+      do
+      {
+         // Check for the end from the start.  Get out fast, if possible.
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (*pWild && pWild < pPatternEnd)
+            {
+               while (*pWild == '*')
+               {
+                  if (!(*(++pWild)))
+                  {
+                     if (ppEnd)   // "ab*" finds "ab".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     pTargets.matches.at(0).pEnd = pTame;
+                     *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+                     return pFirstWildMatch ? pFirstWildMatch : pTame;
+                  }
+                  else
+                  {
+                     if (iMatch >= (int) MAX_MATCHES - 1)
+                     {
+                        if (ppEnd)
+                        {
+                           *ppEnd = nullptr;
+                        }
+
+                        pTargets.matches.at(0).pBegin = 
+                            pTargets.matches.at(0).pEnd = nullptr;
+                        *ppBegin = pEndOriginal;
+                        return nullptr;
+                     }
+
+                     pTargets.matches.at(iMatch++).pEnd = pTameSequence ? 
+                         pTameSequence : pTame;
+                     pTargets.matches.at(iMatch).pBegin = pTame;
+                  }
+               }
+      
+               if (ppEnd)         // "abcd" doesn't find "abc".
+               {
+                  *ppEnd = nullptr;
+               }
+
+               pTargets.matches.at(0).pBegin = pTargets.matches.at(0).pEnd = 
+                      nullptr;
+               *ppBegin = pEndOriginal;
+               return nullptr;
+            }
+            else if (pWildMatch)
+            {
+               if (ppEnd)         // "*abc" finds "abc".
+               {
+                  *ppEnd = pTame;
+               }
+
+               pTargets.matches.at(iMatch).pEnd = pTameSequence ? 
+                      pTameSequence : pTame;
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+               return pFirstWildMatch ? pFirstWildMatch : pTame;
+            }
+            else
+            {
+               pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+               *ppBegin = pEndOriginal;  // No wildcard found.
+               return pFirstWildMatch;
+            }
+         }
+         else if (*pWild == '*')
+         {
+            // Set up for the fourth "do" loop and skip on down there.
+            pTargets.matches.at(iMatch).pBegin = pWildMatch = pTame;
+
+            if (!pFirstWildMatch)
+            {
+               pFirstWildMatch = pWildMatch;
+            }
+
+            while (*(++pWild) == '*')
+            {
+               if (iMatch >= (int) MAX_MATCHES - 1)
+               {
+                  if (ppEnd)
+                  {
+                     *ppEnd = nullptr;
+                  }
+
+                  pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+                  *ppBegin = pEndOriginal;
+                  return nullptr;
+               }
+
+               pTargets.matches.at(iMatch++).pEnd = pTameSequence ? 
+                      pTameSequence : pTame;
+               pTargets.matches.at(iMatch).pBegin = pTame;
+            }
+
+            if (!*pWild || pWild >= pPatternEnd)
+            {
+               if (ppEnd)          // "ab*" finds "abc".
+               {
+                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame))
+                  {
+                     continue;
+                  }
+
+                  *ppEnd = pTame;
+               }
+
+               pTargets.matches.at(iMatch).pEnd = pTame;
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+               return pFirstWildMatch;
+            }
+
+            // Search for the next prospective match.
+            if (*pWild != '?')
+            {
+               while (!CodePointCaseCompareUtf8(pWild, pTame))
+               {
+                  if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
+                  {
+                     if (pFirstMatch)  // "a*bc" doesn't find "ab".
+                     {
+                        pTame = pFirstMatch;
+                        CodePointAdvanceUtf8((const uint8_t **) &pTame);
+                     }
+
+                     goto seek_pattern;
+                  }
+               }
+            }
+
+            // Keep fallback positions.
+            pWildSequence = pWild;
+            pTameSequence = pTame;
+            break;
+         }
+         else if (!CodePointCaseCompareUtf8(pWild, pTame) && *pWild != '?')
+         {
+            if (pFirstMatch)           // "*abc" doesn't find "abd".
+            {
+               pTame = pFirstMatch;
+               pFirstMatch = nullptr;
+            }
+
+            CodePointAdvanceUtf8((const uint8_t **) &pTame);
+            goto seek_pattern;
+         }
+         else if (!pFirstMatch)
+         {
+            pFirstMatch = pTame;       // Got prospective match on search pattern.
+         }
+
+         // Everything's a match, so far.
+         CodePointAdvanceUtf8((const uint8_t **) &pWild);
+         CodePointAdvanceUtf8((const uint8_t **) &pTame);
+      } while (true);
+   }
+
+   // Find any further wildcards and any further matching sequences.
+   do
+   {
+      if (*pWild == '*')
+      {
+         // Got wild again.
+         while (*(++pWild) == '*')
+         {
+            if (iMatch >= (int) MAX_MATCHES - 1)
+            {
+               if (ppEnd)
+               {
+                  *ppEnd = nullptr;
+               }
+
+               pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+               *ppBegin = pEndOriginal;
+               return nullptr;
+            }
+
+            pTargets.matches.at(iMatch++).pEnd = pTame;
+            pTargets.matches.at(iMatch).pBegin = pTame;
+         }
+
+         if (iMatch >= (int) MAX_MATCHES - 1)
+         {
+            if (ppEnd)
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+
+         if (pWildMatch)
+         {
+            pTargets.matches.at(iMatch++).pEnd = pTameSequence ? 
+                      pTameSequence : pTame;
+            pTargets.matches.at(iMatch).pBegin = pTame;
+         }
+         else
+         {
+            pWildMatch = pTame;
+
+            if (!pFirstWildMatch)
+            {
+               pFirstWildMatch = pWildMatch;
+            }
+            else if (!iMatch)
+            {
+               pTargets.matches.at(iMatch).pBegin = pFirstMatch;
+               pTargets.matches.at(iMatch++).pEnd = pTameSequence ? 
+                         pTameSequence : pTame;
+            }
+         }
+
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            if (*pTame)
+            {
+               pTargets.matches.at(iMatch).pEnd = pTame;
+
+               if (ppEnd)                 // "a*d" finds "abcd".
+               {
+                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                         pTame < *ppEnd)
+                  {
+                     continue;
+                  }
+
+                  *ppEnd = pTame;
+               }
+            }
+            else
+            {
+               while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                      pTame < *ppEnd)
+               {
+                  continue;
+               }
+
+               pTargets.matches.at(iMatch).pEnd = pTame;
+
+               if (ppEnd)                 // "a*c*" finds "abcd".
+               {
+                  *ppEnd = pTame;
+               }
+            }
+
+            *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+            return pFirstWildMatch;
+         }
+
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)            // "*bcd*" doesn't find "abc".
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+
+         // Search for the next prospective match.
+         if (*pWild != '?')
+         {
+            while (!CodePointCaseCompareUtf8(pWild, pTame))
+            {
+               if (!CodePointAdvanceUtf8((const uint8_t **) &pTame))
+               {
+                  if (pFirstMatch)     // "a*b*c" doesn't find "ab".
+                  {
+                     pTame = pFirstMatch;
+                     pFirstMatch = nullptr;
+                  }
+
+                  CodePointAdvanceUtf8((const uint8_t **) &pTame);
+                  goto seek_pattern;
+               }
+            }
+         }
+
+         // Keep the new fallback positions.
+         pWildSequence = pWild;
+         pTameSequence = pTame;
+      }
+      else if (!CodePointCaseCompareUtf8(pWild, pTame) && *pWild != '?')
+      {
+         // The equivalent portion of the upper loop is really simple.
+         if (!*pTame || (ppEnd && pTame >= *ppEnd))
+         {
+            if (ppEnd)            // "*bc" doesn't find "abcd".
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            // A fine time for questions.
+            iQCount = 0;
+
+            if (pWildSequence)
+            {
+               while (*pWildSequence == '?')
+               {
+                  ++pWildSequence;
+                  ++iQCount;
+                  CodePointAdvanceUtf8((const uint8_t **) &pTameSequence);
+               }
+
+               if (!*pWildSequence || pWildSequence >= pPatternEnd)   
+               {
+                  while (CodePointAdvanceUtf8((const uint8_t **) &pTame) && 
+                      (!ppEnd || pTame < *ppEnd))
+                  {
+                     continue;
+                  }
+
+                  if (iQCount)
+                  {
+                     CodePointBacktrackUtf8((const uint8_t **) &pTame, *ppBegin);
+                     pTargets.matches.at(iMatch).pEnd = pTame;
+
+                     if (ppEnd)   // "a*?" finds "abcd".
+                     {
+                        *ppEnd = pTame;
+                     }
+
+                     *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+                     return pWildMatch ? pWildMatch : pFirstMatch;
+                  }
+
+                  if (ppEnd)      // "a*?d" finds "abcd".
+                  {
+                     *ppEnd = pTameSequence ? pTameSequence : pTame;
+                  }
+               }
+               else
+               {
+                  if (ppEnd)      // "a*c*d" finds "abcd".
+                  {
+                     *ppEnd = pTame;
+                  }
+
+                  pTargets.matches.at(iMatch).pEnd = pTameSequence ? 
+                      pTameSequence : pTame;
+               }
+
+               *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+               return pFirstWildMatch;
+            }
+			else
+            {
+               if (ppEnd)         // No wildcard found.
+               {
+                  *ppEnd = nullptr;
+               }
+
+               pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            }
+
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+
+         // Another fine time for questions.
+         if (pWildSequence && pWildSequence < pPatternEnd)
+         {
+            while (*pWildSequence == '?')
+            {
+               CodePointAdvanceUtf8((const uint8_t **) &pWildSequence);
+               CodePointAdvanceUtf8((const uint8_t **) &pTameSequence);
+            }
+
+            // Fall back, but never so far again.
+            pWild = pWildSequence;
+
+            while (!CodePointAdvanceAndCaseCompareUtf8(pWild,
+                      (const uint8_t **) &pTameSequence))
+            {
+               if (!*pTameSequence || (ppEnd && pTameSequence >= *ppEnd))
+               {
+                  if (ppEnd)      // "*a*b" doesn't find "ac".
+                  {
+                     *ppEnd = nullptr;
+                  }
+
+                  pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+                  *ppBegin = pEndOriginal;
+                  return nullptr;
+               }
+            }
+
+            pTame = pTameSequence;
+         }
+		 else
+         {
+            if (ppEnd)            // "?a*" doesn't find "ab".
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+      }
+
+      // Another check for the end, at the end.
+      if (!*pTame || (ppEnd && pTame >= *ppEnd))
+      {
+         if (!*pWild || pWild >= pPatternEnd)
+         {
+            if (ppEnd)            // "*bc" finds "abc".
+            {
+               *ppEnd = pTame;
+            }
+
+            pTargets.matches.at(iMatch).pEnd = pTameSequence ? 
+                      pTameSequence : pTame;
+            *ppBegin = pFirstMatch ? pFirstMatch : pTame;
+            return pFirstWildMatch;
+         }
+         else
+         {
+            if (ppEnd)            // "*bcd" doesn't find "abc".
+            {
+               *ppEnd = nullptr;
+            }
+
+            pTargets.matches.at(0).pBegin = 
+                      pTargets.matches.at(0).pEnd = nullptr;
+            *ppBegin = pEndOriginal;
+            return nullptr;
+         }
+      }
+
+      // Everything's still a match.
+      CodePointAdvanceUtf8((const uint8_t **) &pWild);
+      CodePointAdvanceUtf8((const uint8_t **) &pTame);
+   } while (true);
+}
+
+//
+// Hierarchical content selection via wildcards.
+//
+
+// The MatchComparator struct declared in fastutf8.h includes comparators used 
+// to implement "order by" behavior for the Wild*Select() family of functions.
+//
+FastUtf8::MatchComparator::MatchComparator(
+      std::size_t offset) noexcept : targetOffset(offset)
+{
+   if (targetOffset > (std::size_t) MAX_MATCHES)
+   {
+      targetOffset = -1;
+   }
+}
+
+// This byte-by-byte comparator for individual code points is case-insensitive 
+// but not locale-specific.
+bool FastUtf8::MatchComparator::isContentIdentical(
+     const uint8_t *pContentA, 
+     const uint8_t *pContentB) const noexcept
+{
+   return CodePointCaseCompareUtf8(pContentA, pContentB);
+}
+
+// This comparator for content ranges is suitable for ordering UTF-8 code 
+// points by their values, though like the byte-by-byte comparator, it is not 
+// locale-specific.  It also is likely to be case-sensitive.
+bool FastUtf8::MatchComparator::compareContent(
+     const uint8_t *pContentA, 
+     const uint8_t *pContentB) const noexcept
+{
+   return std::lexicographical_compare(
+     pContentA, pContentA + SizeOfUtf8(pContentA),
+     pContentB, pContentB + SizeOfUtf8(pContentB));
+}
+
+// This functor implements the "order by" behavior.  The Wild*Select() 
+// function invokes this functor when it populates a result set comprising 
+// vectored wildcard search targets.
+bool FastUtf8::MatchComparator::operator() (
+                      const MatchVector& vectorA, 
+                      const MatchVector& vectorB) const noexcept
+{
+   const uint8_t *pTargetA;  // First match on a '*' wildcard
+   const uint8_t *pTargetB;  // Second match on a '*' wildcard
+   std::size_t i;            // Index for the inbound MatchVector objects
+
+   if (targetOffset >= 0 && targetOffset <= vectorA.vectorSize && 
+                            targetOffset <= vectorB.vectorSize)
+   {
+      pTargetA = vectorA.matches[targetOffset].pBegin;
+      pTargetB = vectorB.matches[targetOffset].pBegin;
+   
+      // Compare the selected target content.
+      if (!isContentIdentical(pTargetA, pTargetB))
+      {
+         return compareContent(pTargetA, pTargetB);
+      }
+      else
+      {
+         // Lexicographically compare mismatched content.
+         for (i = 0; i < (std::size_t) MAX_MATCHES; i++)
+         {
+            if (!isContentIdentical(vectorA.matches[i].pBegin, 
+                      vectorB.matches[i].pBegin))
+            {
+               return compareContent(vectorA.matches[i].pBegin, 
+                      vectorB.matches[i].pBegin);
+            }
+         }
+   
+         if (!isContentIdentical(vectorA.matches[i].pEnd, 
+                      vectorB.matches[i].pEnd))
+         {
+            return compareContent(vectorA.matches[i].pEnd, 
+                      vectorB.matches[i].pEnd);
+         }
+      }
+   }
+
+   return false; 
+}
+
+// Given hierarchical semistructured content in UTF-8 format and a wildcard- 
+// containing UTF-8 search pattern, traverses the hierarchy based on outer 
+// '*' wildcards to populate a set of matches, if any, on the inner '*' 
+// wildcards remaining within the pattern.
+//
+// If one or more matches is found, populates pResultSet with beginning and 
+// ending locations of all matches on '*' wildcards at the center of the 
+// pattern, where the outer '*' wildcards have been applied to select nested 
+// content to match, to a nesting level specified by the iLevel parameter.  
+// The result set is ordered by matches on the '*' wildcard whose position, 
+// among all of the '*' wildcards in the pattern, is specified via the  
+// MatchComparator functor associated with pResultSet.  Returns a pointer to 
+// the first match on the overall pattern, i.e. to the beginning of the 
+// hierarchy corresponding to the pattern.
+//
+// If no match is found, or if there are insufficient outer '*' wildcards at 
+// each end of the pattern to accommodate the specified iLevel value, leaves 
+// *pResultSet initialized to nulls and returns nullptr.  If iLevel > 
+// MAX_LEVEL, behaves as though iLevel == MAX_LEVEL.
+//
+uint8_t * FastUtf8::WildSelect(
+     const uint8_t *pBegin,           // Location of content to search
+     uint8_t       **ppEnd,           // Updated ending location of search
+     const uint8_t *pFullPattern,     // Specifier that includes wildcards
+     int           iLevel,            // Count of nested outer '*' wildcards
+     FastUtf8::ResultSet *pResultSet) // Set of vectors of matches for each '*'
+{
+   uint8_t *pTame;           // Code point in content to search
+   uint8_t *pTameNext;       // Successor location in content to search
+   uint8_t *pTameEnd;        // End of a found match in content
+   uint8_t *pWild;           // Code point in search pattern
+   uint8_t *pWildNext;       // Successor location in search pattern
+   uint8_t *pOverallMatch;   // Beginning of first overall match on pattern
+   uint8_t *pProspectiveMatch;       // Beginning of prospective overall match
+   uint8_t *pMatch;          // Match on a wildcard-delimited sequence
+   uint8_t *pPatternBegin;   // Beginning of vectorized wildcard search pattern
+   uint8_t *pPatternEnd;     // End of vectorized wildcard search pattern
+   int iMudd;                // Given nesting level, zero-based
+   int iDepth;               // Nesting level reached during processing
+   int iCount;               // Partial count of '*' wildcards
+   int iMatches;             // Count of findings in result set
+   FastUtf8::MatchVector pMatches;   // Match vector
+
+   // Arrays for wildcard-delimited nested opening and closing sequences
+   std::array<FastUtf8::WildTarget, FastUtf8::MAX_LEVEL> heads;
+   std::array<FastUtf8::WildTarget, FastUtf8::MAX_LEVEL> tails;
+
+   // Is input valid?
+   if (pBegin && pFullPattern && pResultSet && 
+                      (iLevel <= (int) FastUtf8::MAX_LEVEL))
+   {
+      if (ppEnd && *ppEnd && *ppEnd <= pBegin)
+      {
+         if (pResultSet)             // End location is ahead of the beginning.
+         {
+            pResultSet = nullptr;
+         }
+
+         return nullptr;
+      }
+
+      pTame = (uint8_t *) pBegin;
+   }
+   else
+   {
+      if (pResultSet)              // Got empty input.
+      {
+         pResultSet = nullptr;
+      }
+
+      return nullptr;
+   }
+
+   iDepth = iMatches = 0;
+   iMudd = iLevel - 1;
+   heads[iDepth].pBegin = pWild = (uint8_t *) pFullPattern;
+
+   // Obtain opening sequences from the search pattern.
+   do
+   {
+      pWild = TokenFindUtf8(pWild, (const uint8_t *) u8"*");
+
+      if (!pWild)                  // Pattern has insufficient '*' wildcards.
+      {
+         if (pResultSet)
+         {
+            pResultSet = nullptr;
+         }
+
+         return nullptr;
+      }
+
+      heads[iDepth].pEnd = ++pWild;
+
+      if (++iDepth <= iMudd)
+      {
+         heads[iDepth].pBegin = pWild;
+      }
+      else
+      {
+         break;
+      }
+   } while (true);
+
+   pPatternBegin = pWild;
+   pWild = TokenFindUtf8(pWild, (const uint8_t *) u8"*");
+
+   if (!pWild)                     // Pattern has insufficient '*' wildcards.
+   {
+      if (pResultSet)
+      {
+         pResultSet = nullptr;
+      }
+
+      return nullptr;
+   }
+
+   // Count the remaining '*' wildcards in the pattern.
+   iCount = 0;
+
+   do
+   {
+      pWild = TokenFindUtf8(pWild, (const uint8_t *) u8"*");
+
+      if (!pWild)                  // Pattern has insufficient '*' wildcards.
+      {
+         if (iCount < iMudd)
+         {
+            if (pResultSet)
+            {
+               pResultSet = nullptr;
+            }
+
+            return nullptr;
+         }
+
+         break;
+      }
+
+      ++iCount;
+      ++pWild;
+   } while (true);
+
+   // Find the end of the pattern.
+   pWild = pPatternBegin;
+
+   do
+   {
+      pWildNext = TokenFindUtf8(pWild, (const uint8_t *) u8"*");
+
+      if (!pWildNext)
+      {
+         pWild += SizeOfUtf8(pWild);
+         break;
+      }
+
+      pWild = ++pWildNext;
+
+      if (iCount > iMudd)
+      {
+         iCount--;
+      }
+      else
+      {
+         break;
+      }
+   } while (true);
+
+   // Obtain closing sequences from the pattern.
+   pPatternEnd = pWild;
+
+   do
+   {
+      if (iDepth)
+      {
+         tails[--iDepth].pBegin = pWild;
+      }
+      else
+      {
+         break;
+      }
+
+      pWildNext = TokenFindUtf8(pWild, (const uint8_t *) u8"*");
+
+      if (pWildNext)
+      {
+         pWild = 1 + pWildNext;
+      }
+      else
+      {
+         pWild += SizeOfUtf8(pWild);
+         break;
+      }
+
+      tails[iDepth].pEnd = pWild;
+   } while (true);
+
+   // Scan the content depth-first for matches on opening sequences.
+   tails[iDepth].pEnd = pWild;
+   pOverallMatch = pProspectiveMatch = nullptr;
+
+   if (g_bMatchAllTails)
+   {
+      // Include a check for a match on the last tail.  That is, seek content 
+	  // sequences corresponding to matches on opening wildcards, then seek 
+	  // wildcard matches for the selected level and store them in the result 
+	  // set, and finally don't neglect to seek sequences corresponding to the 
+	  // remaining wildcards, including any portion of the search pattern 
+	  // after the last '*' wildcard.  Clear the result set unless every one 
+	  // of those tail matches is found.
+      do
+      {
+         do
+         {
+            if (!pTame || !*pTame || (ppEnd && pTame > *ppEnd))
+            {
+               return pOverallMatch;
+            }
+ 
+            // Find an opening sequence.
+			pTameNext = pTame;
+            pMatch = WildFindSliceUtf8(&pTameNext, heads[iDepth].pBegin, 
+                         heads[iDepth].pEnd, /* ppEnd = */ nullptr, 
+                         /* ppTarget = */ nullptr);
+
+            if (pTameNext)
+            {
+               pTame = pTameNext;
+            }
+
+            if (pMatch)
+            {
+               if (pMatch > pTame)
+               {
+                  pTame = pMatch;
+               }
+
+               if (!pProspectiveMatch)  // Found a sequence for this level.
+               {
+                  pProspectiveMatch = pMatch = pTame;
+               }
+
+               if (iDepth >= iMudd)
+               {
+                  break;
+               }
+               else
+               {
+                  ++iDepth;
+               }
+            }
+            else
+            {
+               do
+               {
+                  // Find a closing sequence at this level.
+                  pMatch = WildFindSliceUtf8(&pTame, 
+                         tails[iDepth].pBegin, tails[iDepth].pEnd, 
+                         /* ppEnd = */ nullptr, /* ppTarget = */ nullptr);
+
+                  if (pMatch > pTame)
+                  {
+                     pTame = pMatch;
+                  }
+
+                  if (!pTame || !*pTame || (ppEnd && pTame > *ppEnd))
+                  {
+                     pResultSet->clear();
+                     return nullptr;
+                  }
+
+                  if (!--iDepth)   // Is there a next outer level?
+                  {
+                     pMatch = FindSliceUtf8(pTame, 
+                         tails[iDepth].pBegin, tails[iDepth].pEnd, 
+                         /* ppEnd = */ nullptr);
+
+                     if (pMatch)   // Found a complete set of tail matches.
+                     {
+                        return pOverallMatch;
+                     }
+                     else
+                     {
+                        pResultSet->clear();
+                        return nullptr;
+                     }
+                  }
+               } while (true);
+            }
+         } while (true);
+
+         // Find a current-level closing sequence.
+         pTameEnd = pTame;
+         pMatch = WildFindSliceUtf8(&pTameEnd, tails[iDepth].pBegin,
+                         tails[iDepth].pEnd, /* ppEnd = */ nullptr, 
+                         /* ppTarget = */ nullptr);
+
+         if (pMatch)
+         {
+            if (pProspectiveMatch)
+            {
+               if (FastUtf8::WildVectorize(&pTame, &pTameEnd, 
+                         pPatternBegin, pPatternEnd, pMatches))
+               {
+                  pResultSet->insert(std::move(pMatches));
+
+                  if (++iMatches >= (int) FastUtf8::MAX_MATCHES)
+                  {
+                     break;
+                  }
+               }
+            }
+         }
+         else
+         {
+            break;
+         }
+
+         if (pProspectiveMatch && !pOverallMatch)
+         {
+            pOverallMatch = pProspectiveMatch;
+         }
+      } while (true);
+   }
+   else
+   {
+      // Skip checking for matches on the portion of the search pattern after 
+	  // the last '*' wildcard.  Return any matches found at the selected 
+	  // level.
+      do
+      {
+         do
+         {
+            if (!pTame || !*pTame || (ppEnd && pTame > *ppEnd))
+            {
+               return pOverallMatch;
+            }
+ 
+            // Find an opening sequence.
+            pMatch = WildFindSliceUtf8(&pTame, heads[iDepth].pBegin, 
+                         heads[iDepth].pEnd, /* ppEnd = */ nullptr, 
+                         /* ppTarget = */ nullptr);
+
+            if (pMatch)            // Found a sequence for this level?
+            {
+               if (pMatch > pTame)
+               {
+                  pTame = pMatch;
+               }
+
+               if (!pProspectiveMatch)
+               {
+                  pProspectiveMatch = pMatch = pTame;
+               }
+
+               if (iDepth >= iMudd)
+               {
+                  break;
+               }
+               else
+               {
+                  ++iDepth;
+               }
+            }
+            else
+            {
+               if (!--iDepth)
+               {
+                  return pOverallMatch;
+               }
+            }
+         } while (true);
+
+         // Find a closing sequence.
+         pTameEnd = pTame;
+         pMatch = WildFindSliceUtf8(&pTameEnd, tails[iDepth].pBegin,
+                         tails[iDepth].pEnd, /* ppEnd = */ nullptr, 
+                         /* ppTarget = */ nullptr);
+
+         if (pMatch)
+         {
+            if (pProspectiveMatch)
+   		    {
+               if (FastUtf8::WildVectorize(&pTame, &pTameEnd, 
+                         pPatternBegin, pPatternEnd, pMatches))
+               {
+                  pResultSet->insert(std::move(pMatches));
+
+                  if (++iMatches >= (int) FastUtf8::MAX_MATCHES)
+                  {
+                     break;
+                  }
+               }
+            }
+         }
+         else
+         {
+            break;
+         }
+
+         if (pProspectiveMatch && !pOverallMatch)
+         {
+            pOverallMatch = pProspectiveMatch;
+         }
+      } while (true);
+   }
+
+   if (ppEnd)
+   {
+      *ppEnd = pTame;
+   }
+
+   return pOverallMatch;
+}
+
+// Hierarchical content selection (case-insensitive).
+// See comments for WildSelect().  Content comparison is performed with 
+// case folding.
+//
+uint8_t * FastUtf8::WildCaseSelect(
+     const uint8_t *pBegin,           // Location of content to search
+     uint8_t       **ppEnd,           // Updated ending location of search
+     const uint8_t *pFullPattern,     // Specifier that includes wildcards
+     int           iLevel,            // Count of nested outer '*' wildcards
+     FastUtf8::ResultSet *pResultSet) // Set of vectors of matches for each '*'
+{
+   uint8_t *pTame;           // Code point in content to search
+   uint8_t *pTameNext;       // Successor location in content to search
+   uint8_t *pTameEnd;        // End of a found match in content
+   uint8_t *pWild;           // Code point in search pattern
+   uint8_t *pWildNext;       // Successor location in search pattern
+   uint8_t *pOverallMatch;   // Beginning of first overall match on pattern
+   uint8_t *pProspectiveMatch;       // Beginning of prospective overall match
+   uint8_t *pMatch;          // Match on a wildcard-delimited sequence
+   uint8_t *pPatternBegin;   // Beginning of vectorized wildcard search pattern
+   uint8_t *pPatternEnd;     // End of vectorized wildcard search pattern
+   int iMudd;                // Given nesting level, zero-based
+   int iDepth;               // Nesting level reached during processing
+   int iCount;               // Partial count of '*' wildcards
+   int iMatches;             // Count of findings in result set
+   FastUtf8::MatchVector pMatches;   // Match vector
+
+   // Arrays for wildcard-delimited nested opening and closing sequences
+   std::array<FastUtf8::WildTarget, FastUtf8::MAX_LEVEL> heads;
+   std::array<FastUtf8::WildTarget, FastUtf8::MAX_LEVEL> tails;
+
+   // Is input valid?
+   if (pBegin && pFullPattern && pResultSet && 
+                      (iLevel <= (int) FastUtf8::MAX_LEVEL))
+   {
+      if (ppEnd && *ppEnd && *ppEnd <= pBegin)
+      {
+         if (pResultSet)             // End location is ahead of the beginning.
+         {
+            pResultSet = nullptr;
+         }
+
+         return nullptr;
+      }
+
+      pTame = (uint8_t *) pBegin;
+   }
+   else
+   {
+      if (pResultSet)              // Got empty input.
+      {
+         pResultSet = nullptr;
+      }
+
+      return nullptr;
+   }
+
+   iDepth = iMatches = 0;
+   iMudd = iLevel - 1;
+   heads[iDepth].pBegin = pWild = (uint8_t *) pFullPattern;
+
+   // Obtain opening sequences from the search pattern.
+   do
+   {
+      pWild = TokenFindUtf8(pWild, (const uint8_t *) u8"*");
+
+      if (!pWild)                  // Pattern has insufficient '*' wildcards.
+      {
+         if (pResultSet)
+         {
+            pResultSet = nullptr;
+         }
+
+         return nullptr;
+      }
+
+      heads[iDepth].pEnd = ++pWild;
+
+      if (++iDepth <= iMudd)
+      {
+         heads[iDepth].pBegin = pWild;
+      }
+      else
+      {
+         break;
+      }
+   } while (true);
+
+   pPatternBegin = pWild;
+   pWild = TokenFindUtf8(pWild, (const uint8_t *) u8"*");
+
+   if (!pWild)                     // Pattern has insufficient '*' wildcards.
+   {
+      if (pResultSet)
+      {
+         pResultSet = nullptr;
+      }
+
+      return nullptr;
+   }
+
+   // Count the remaining '*' wildcards in the pattern.
+   iCount = 0;
+
+   do
+   {
+      pWild = TokenFindUtf8(pWild, (const uint8_t *) u8"*");
+
+      if (!pWild)                  // Pattern has insufficient '*' wildcards.
+      {
+         if (iCount < iMudd)
+         {
+            if (pResultSet)
+            {
+               pResultSet = nullptr;
+            }
+
+            return nullptr;
+         }
+
+         break;
+      }
+
+      ++iCount;
+      ++pWild;
+   } while (true);
+
+   // Find the end of the pattern.
+   pWild = pPatternBegin;
+
+   do
+   {
+      pWildNext = TokenFindUtf8(pWild, (const uint8_t *) u8"*");
+
+      if (!pWildNext)
+      {
+         pWild += SizeOfUtf8(pWild);
+         break;
+      }
+
+      pWild = ++pWildNext;
+
+      if (iCount > iMudd)
+      {
+         iCount--;
+      }
+      else
+      {
+         break;
+      }
+   } while (true);
+
+   // Obtain closing sequences from the pattern.
+   pPatternEnd = pWild;
+
+   do
+   {
+      if (iDepth)
+      {
+         tails[--iDepth].pBegin = pWild;
+      }
+      else
+      {
+         break;
+      }
+
+      pWildNext = TokenFindUtf8(pWild, (const uint8_t *) u8"*");
+
+      if (pWildNext)
+      {
+         pWild = 1 + pWildNext;
+      }
+      else
+      {
+         pWild += SizeOfUtf8(pWild);
+         break;
+      }
+
+      tails[iDepth].pEnd = pWild;
+   } while (true);
+
+   // Scan the content depth-first for matches on opening sequences.
+   tails[iDepth].pEnd = pWild;
+   pOverallMatch = pProspectiveMatch = nullptr;
+
+   if (g_bMatchAllTails)
+   {
+      // Include a check for a match on the last tail.  That is, seek content 
+	  // sequences corresponding to matches on opening wildcards, then seek 
+	  // wildcard matches for the selected level and store them in the result 
+	  // set, and finally don't neglect to seek sequences corresponding to the 
+	  // remaining wildcards, including any portion of the search pattern 
+	  // after the last '*' wildcard.  Clear the result set unless every one 
+	  // of those tail matches is found.
+      do
+      {
+         do
+         {
+            if (!pTame || !*pTame || (ppEnd && pTame > *ppEnd))
+            {
+               return pOverallMatch;
+            }
+ 
+            // Find an opening sequence.
+			pTameNext = pTame;
+            pMatch = WildCaseFindSliceUtf8(&pTameNext, heads[iDepth].pBegin, 
+                         heads[iDepth].pEnd, /* ppEnd = */ nullptr, 
+                         /* ppTarget = */ nullptr);
+
+            if (pTameNext)
+            {
+               pTame = pTameNext;
+            }
+
+            if (pMatch)
+            {
+               if (pMatch > pTame)
+               {
+                  pTame = pMatch;
+               }
+
+               if (!pProspectiveMatch)  // Found a sequence for this level.
+               {
+                  pProspectiveMatch = pMatch = pTame;
+               }
+
+               if (iDepth >= iMudd)
+               {
+                  break;
+               }
+               else
+               {
+                  ++iDepth;
+               }
+            }
+            else
+            {
+               do
+               {
+                  // Find a closing sequence at this level.
+                  pMatch = WildCaseFindSliceUtf8(&pTame, 
+                         tails[iDepth].pBegin, tails[iDepth].pEnd, 
+                         /* ppEnd = */ nullptr, /* ppTarget = */ nullptr);
+
+                  if (pMatch > pTame)
+                  {
+                     pTame = pMatch;
+                  }
+
+                  if (!pTame || !*pTame || (ppEnd && pTame > *ppEnd))
+                  {
+                     pResultSet->clear();
+                     return nullptr;
+                  }
+
+                  if (!--iDepth)   // Is there a next outer level?
+                  {
+                     pMatch = CaseFindSliceUtf8(pTame, 
+                         tails[iDepth].pBegin, tails[iDepth].pEnd, 
+                         /* ppEnd = */ nullptr);
+
+                     if (pMatch)   // Found a complete set of tail matches.
+                     {
+                        return pOverallMatch;
+                     }
+                     else
+                     {
+                        pResultSet->clear();
+                        return nullptr;
+                     }
+                  }
+               } while (true);
+            }
+         } while (true);
+
+         // Find a current-level closing sequence.
+         pTameEnd = pTame;
+         pMatch = WildCaseFindSliceUtf8(&pTameEnd, tails[iDepth].pBegin,
+                         tails[iDepth].pEnd, /* ppEnd = */ nullptr, 
+                         /* ppTarget = */ nullptr);
+
+         if (pMatch)
+         {
+            if (pProspectiveMatch)
+            {
+               if (FastUtf8::WildCaseVectorize(&pTame, &pTameEnd, 
+                         pPatternBegin, pPatternEnd, pMatches))
+               {
+                  pResultSet->insert(std::move(pMatches));
+
+                  if (++iMatches >= (int) FastUtf8::MAX_MATCHES)
+                  {
+                     break;
+                  }
+               }
+            }
+         }
+         else
+         {
+            break;
+         }
+
+         if (pProspectiveMatch && !pOverallMatch)
+         {
+            pOverallMatch = pProspectiveMatch;
+         }
+      } while (true);
+   }
+   else
+   {
+      // Skip checking for matches on tails.  Return any matches found at the 
+      // selected level.
+      do
+      {
+         do
+         {
+            if (!pTame || !*pTame || (ppEnd && pTame > *ppEnd))
+            {
+               return pOverallMatch;
+            }
+ 
+            // Find an opening sequence.
+            pMatch = WildCaseFindSliceUtf8(&pTame, heads[iDepth].pBegin, 
+                         heads[iDepth].pEnd, /* ppEnd = */ nullptr, 
+                         /* ppTarget = */ nullptr);
+
+            if (pMatch)            // Found a sequence for this level?
+            {
+               if (pMatch > pTame)
+               {
+                  pTame = pMatch;
+               }
+
+               if (!pProspectiveMatch)
+               {
+                  pProspectiveMatch = pMatch = pTame;
+               }
+
+               if (iDepth >= iMudd)
+               {
+                  break;
+               }
+               else
+               {
+                  ++iDepth;
+               }
+            }
+            else
+            {
+               if (!--iDepth)
+               {
+                  return pOverallMatch;
+               }
+            }
+         } while (true);
+
+         // Find a closing sequence.
+         pTameEnd = pTame;
+         pMatch = WildCaseFindSliceUtf8(&pTameEnd, tails[iDepth].pBegin,
+                         tails[iDepth].pEnd, /* ppEnd = */ nullptr, 
+                         /* ppTarget = */ nullptr);
+
+         if (pMatch)
+         {
+            if (pProspectiveMatch)
+   		 {
+               if (FastUtf8::WildCaseVectorize(&pTame, &pTameEnd, 
+                         pPatternBegin, pPatternEnd, pMatches))
+               {
+                  pResultSet->insert(std::move(pMatches));
+
+                  if (++iMatches >= (int) FastUtf8::MAX_MATCHES)
+                  {
+                     break;
+                  }
+               }
+            }
+         }
+         else
+         {
+            break;
+         }
+
+         if (pProspectiveMatch && !pOverallMatch)
+         {
+            pOverallMatch = pProspectiveMatch;
+         }
+      } while (true);
+   }
+
+   if (ppEnd)
+   {
+      *ppEnd = pTame;
+   }
+
+   return pOverallMatch;
+}
+
+//
+//  The following classes live in the FastUtf8 namespace:
+//   - A FastUtf8::Uniseries class instantiated per UTF-8 content sequence
+//     A content sequence can contain up to 4GB of code points and may 
+//     represent, e.g., an ASCII string, a Devanāgarī shirorekha, an emoji 
+//     combo, a Hangul Mundan, an Urdu bayt, etc.
+//   - A FastUtf8::Initializer class instantiated once per session, and 
+//   - A FastUtf8::Uniseries::Iterator class for walking through content
+//
 namespace FastUtf8
 {
-
 // An object of the FastUtf8::Uniseries class stores the following data:
 //
 //  A content buffer
@@ -8752,7 +12673,9 @@ namespace FastUtf8
 // fastutf8.h (and also defined in this file) or available in the standard C 
 // library.
 //
-FastUtf8::Uniseries::Uniseries(uint8_t *pInbound, bool bWrapBuffer)
+FastUtf8::Uniseries::Uniseries(const uint8_t *pInbound, 
+                      bool bWrapBuffer, 
+                      bool bDeallocOnDestruct)
 {
    int    lenContent;
    bool   bIs7BitCharString;
@@ -8764,7 +12687,12 @@ FastUtf8::Uniseries::Uniseries(uint8_t *pInbound, bool bWrapBuffer)
 
    if (bWrapBuffer)
    {
-      this->m_pContent = pInbound;
+      this->m_pContent = const_cast<uint8_t *> (pInbound);
+
+      if (!bDeallocOnDestruct)
+      {
+         this->m_metadata = IS_DEALLOCATED_EXTERNALLY;
+      }
    }
    else if (nBytes)
    {
@@ -8783,7 +12711,7 @@ FastUtf8::Uniseries::Uniseries(uint8_t *pInbound, bool bWrapBuffer)
    {
       // Found invalid content: treat it as 8-bit ASCII and convert it.
       this->m_pContent = Convert8BitAsciiToUtf8(
-                     reinterpret_cast<char *> (pInbound), &lenContent);
+                     reinterpret_cast<const char *> (pInbound), &lenContent);
    }
 
    if (this->m_pContent)
@@ -8809,20 +12737,28 @@ FastUtf8::Uniseries::Uniseries(uint8_t *pInbound, bool bWrapBuffer)
    return;
 }
 
-FastUtf8::Uniseries::Uniseries(char *pInbound, bool bWrapBuffer)
+FastUtf8::Uniseries::Uniseries(const char *pInbound, 
+                      bool bWrapBuffer, 
+                      bool bDeallocOnDestruct)
 {
    int    lenContent;
    bool   bIs7BitCharString;
    size_t nBytes = ValidateWithIs7BitUtf8(
-                      reinterpret_cast<uint8_t *> (pInbound), &lenContent, 
-                      &bIs7BitCharString);
+                  reinterpret_cast<uint8_t *> (const_cast<char *> (pInbound)), 
+                  &lenContent, &bIs7BitCharString);
 
    FastUtf8::Initializer::setupCaseMappingOnce();
    this->m_metadata = 0;
 
    if (bWrapBuffer)
    {
-      this->m_pContent = reinterpret_cast<uint8_t *> (pInbound);
+      this->m_pContent = 
+                  reinterpret_cast<uint8_t *> (const_cast<char *> (pInbound));
+
+      if (!bDeallocOnDestruct)
+      {
+         this->m_metadata = IS_DEALLOCATED_EXTERNALLY;
+      }
    }
    else if (nBytes)
    {
@@ -8830,7 +12766,8 @@ FastUtf8::Uniseries::Uniseries(char *pInbound, bool bWrapBuffer)
 
       if (this->m_pContent)
       {
-         CopyUtf8(m_pContent, reinterpret_cast<uint8_t *> (pInbound));
+         CopyUtf8(m_pContent, 
+                  reinterpret_cast<uint8_t *> (const_cast<char *> (pInbound)));
       }
    }
    else
@@ -10834,7 +14771,7 @@ size_t FastUtf8::Uniseries::getSize(const char *pInbound) noexcept
    return SizeOfUtf8(reinterpret_cast<const uint8_t *> (pInbound)); 
 }
 
-size_t FastUtf8::Uniseries::getSize(void) noexcept
+size_t FastUtf8::Uniseries::getSize(void) const noexcept
 {
    if (m_metadata & IS_LENGTH_LIMITED)
    {
@@ -11655,9 +15592,8 @@ int FastUtf8::Uniseries::find(
 // search content within the "this" object's content -- that is, a raw pointer 
 // to any first match in "this" -- or a nullptr return value in case that 
 // content is not found.  The optional pFirst parameter refers to a location, 
-// in the "this" content, to begin seeking a match.  The method updates pFirst 
-// and pLast to return the boundaries of any first matching content within 
-// "this".
+// in the "this" content, to begin seeking a match.  The method updates ppLast 
+// to provide the limit of any first matching content within "this".
 uint8_t * FastUtf8::Uniseries::pFind(
       const uint8_t *pSearchContent,   // Needle
       const uint8_t *pFirst,           // Beginning location
@@ -11775,7 +15711,7 @@ uint8_t * FastUtf8::Uniseries::pFind(
                       reinterpret_cast<char **> (ppLast)));
       case IS_7BIT_CHAR_STRING:
       {
-         pMatch = reinterpret_cast<uint8_t *> (const_cast<char*> (std::strstr(
+         pMatch = reinterpret_cast<uint8_t *> (const_cast<char *> (std::strstr(
                       reinterpret_cast<const char *> (pContent), 
                       reinterpret_cast<const char *> (pSearchContent))));
          if (pMatch)
@@ -11965,6 +15901,106 @@ uint8_t * FastUtf8::Uniseries::pFind(
       default:
          return FindUtf8(
                       pContent, that.getContent(), ppLast);
+   }
+}
+
+// This method returns a pointer to the inbound slice within the "this" 
+// object's content, or nullptr in case that slice is not found.  The slice 
+// content comprises the bytes between the locations indicated by pPatternBegin 
+// and pPatternEnd.  The optional pBegin parameter refers to a location, in the 
+// "this" content, to begin seeking a match.  The method updates ppEnd to 
+// provide the limit of any first matching content within "this".
+uint8_t * FastUtf8::Uniseries::pFindSlice(
+      const uint8_t *pPatternBegin,    // Start of needle
+      const uint8_t *pPatternEnd,      // End of needle
+      const uint8_t *pBegin,           // Beginning location
+      uint8_t       **ppEnd) const     // Updated location where match ends
+{
+   const uint8_t *pContent;
+
+   if (pBegin)
+   {
+      pContent = pBegin;
+   }
+   else
+   {
+      pContent = this->m_pContent;
+   }
+
+   switch (this->m_metadata & FLAGS_MASK)
+   {
+      case IS_CASE_INSENSITIVE:
+         return CaseFindSliceUtf8(pContent, pPatternBegin, pPatternEnd, ppEnd);
+      default:
+         return FindSliceUtf8(pContent, pPatternBegin, pPatternEnd, ppEnd);
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::pFindSlice(
+      const uint8_t *pPatternBegin,    // Start of needle
+      const uint8_t *pPatternEnd,      // End of needle
+      const char    *pBegin,           // Beginning location
+      uint8_t       **ppEnd) const     // Updated location where match ends
+{
+   const uint8_t *pContent;
+
+   if (pBegin)
+   {
+      pContent = reinterpret_cast<const uint8_t *> (pBegin);
+   }
+   else
+   {
+      pContent = this->m_pContent;
+   }
+
+   switch (this->m_metadata & FLAGS_MASK)
+   {
+      case IS_CASE_INSENSITIVE:
+         return CaseFindSliceUtf8(
+                      pContent, 
+                      reinterpret_cast<const uint8_t *> (pPatternBegin), 
+                      reinterpret_cast<const uint8_t *> (pPatternEnd), 
+                      ppEnd);
+      default:
+         return FindSliceUtf8(
+                      pContent, 
+                      reinterpret_cast<const uint8_t *> (pPatternBegin), 
+                      reinterpret_cast<const uint8_t *> (pPatternEnd), 
+                      ppEnd);
+   }
+}
+
+// This pFindSlice() method returns a pointer to any first match on 
+// sPattern or between the locations indicated by the optional pBegin and 
+// ppEnd parameters.  If those parameters are null, returns a pointer to 
+// any first match on sPattern within "this".  Returns nullptr in case the 
+// slice is not found.  Ignores the IS_LENGTH_LIMITED flag.
+uint8_t * FastUtf8::Uniseries::pFindSlice(
+      const FastUtf8::Uniseries& sPattern,  // Object containing needle
+      const uint8_t *pBegin,                // Beginning location
+      uint8_t       **ppEnd) const          // Updated loc after end of match
+{
+   const uint8_t *pContent;
+
+   if (pBegin)
+   {
+      pContent = pBegin;
+   }
+   else
+   {
+      pContent = this->m_pContent;
+   }
+
+   switch (this->m_metadata & FLAGS_MASK)
+   {
+      case IS_CASE_INSENSITIVE:
+         return CaseFindSliceUtf8(
+                      pContent, sPattern.getContent(), 
+                      sPattern.getContent() + sPattern.getSize(), ppEnd);
+      default:
+         return FindSliceUtf8(
+                      pContent, sPattern.getContent(), 
+                      sPattern.getContent() + sPattern.getSize(), ppEnd);
    }
 }
 
@@ -12279,6 +16315,80 @@ uint8_t * FastUtf8::Uniseries::casepFind(
    }
 }
 
+// This case-insensitive partial content comparison method returns a pointer  
+// to any first occurrence of the inbound slice within "this" object's content, 
+// or nullptr in case the inbound slice is not found.  It disregards the 
+// IS_CASE_INSENSITIVE flag.  The slice content comprises the bytes between 
+// the locations indicated by pPatternBegin and pPatternEnd.
+uint8_t * FastUtf8::Uniseries::casepFindSlice(
+      const uint8_t *pPatternBegin,   // Start of needle
+      const uint8_t *pPatternEnd,     // End of needle
+      const uint8_t *pFirst,          // Beginning location
+      uint8_t       **ppLast) const   // Updated location where match ends
+{
+   const uint8_t *pContent;
+
+   if (pFirst)
+   {
+      pContent = pFirst;
+   }
+   else
+   {
+      pContent = this->m_pContent;
+   }
+
+   return CaseFindSliceUtf8(pContent, pPatternBegin, pPatternEnd, ppLast);
+}
+
+uint8_t * FastUtf8::Uniseries::casepFindSlice(
+      const uint8_t *pPatternBegin,   // Start of needle
+      const uint8_t *pPatternEnd,     // End of needle
+      const char    *pFirst,          // Beginning location
+      uint8_t       **ppLast) const   // Updated location where match ends
+{
+   const uint8_t *pContent;
+
+   if (pFirst)
+   {
+      pContent = reinterpret_cast<const uint8_t *> (pFirst);
+   }
+   else
+   {
+      pContent = this->m_pContent;
+   }
+
+   return CaseFindSliceUtf8(pContent, 
+                      reinterpret_cast<const uint8_t *> (pPatternBegin), 
+                      reinterpret_cast<const uint8_t *> (pPatternEnd), 
+                      ppLast);
+}
+
+// This casepFindSlice() case-insensitive method returns a pointer to any 
+// first match on sPattern or between the locations indicated by the 
+// optional pFirst and ppLast parameters.  If those parameters are null, 
+// returns a pointer to any first match on sPattern within "this".  Returns 
+// nullptr in case the slice is not found.  Ignores the IS_LENGTH_LIMITED 
+// and IS_CASE_SENSITIVE flags.
+uint8_t * FastUtf8::Uniseries::casepFindSlice(
+      const FastUtf8::Uniseries& sPattern,  // Object containing needle
+      const uint8_t *pFirst,                // Beginning location
+      uint8_t       **ppLast) const         // Updated loc after end of match
+{
+   const uint8_t *pContent;
+
+   if (pFirst)
+   {
+      pContent = pFirst;
+   }
+   else
+   {
+      pContent = this->m_pContent;
+   }
+
+   return CaseFindSliceUtf8(pContent, sPattern.getContent(), 
+                      sPattern.getContent() + sPattern.getSize(), ppLast);
+}
+
 // This method provides for wildcard-based content comparison.  The "this" 
 // content may include the '*' or '?' wildcards.
 bool FastUtf8::Uniseries::wildCompare(const uint8_t *pTame) const noexcept
@@ -12538,17 +16648,21 @@ bool FastUtf8::Uniseries::caseCompareWild(
    }
 }
 
-// The pFindWild() partial content comparison method scans the "this" 
-// content for a first match on the inbound search pattern which is 
-// expected to contain wildcards.  Returns a pointer to the first matching 
-// portion of the content.  The optional parameters are returned targeted 
-// wildcard matching results, for example given this sentence:
+// Targeted wildcard search.
+//
+// To perform a targeted search that returns pointers to content matching the 
+// first and last wildcards in an inbound search pattern, the ::pFindWild() 
+// partial content comparison method scans the "this" content for any first 
+// match on the pattern, which is expected to contain wildcards.  Returns a 
+// pointer to the first matching portion of the content.  The optional 
+// parameters are returned targeted wildcard matching results.  For example,
+// given this sentence...
 //
 // content: "This part is skipped, but here is some content to be matched."
 // pFirst:                            "here is some content to be matched." 
 // pWild:   "some*to*match"                    (location provided by caller)
 //
-// That is, if the caller points pFirst to "here is some content to be 
+// ...that is, if the caller points *ppFirst to "here is some content to be 
 // matched" and provides pointers for ppLast and ppTarget, the method will 
 // set the pointers within the content, this way:
 // 
@@ -12562,9 +16676,9 @@ bool FastUtf8::Uniseries::caseCompareWild(
 // programmatically distinguishable piece of writing that has a particular 
 // word or phrase in it, in some cases via just one call.  Additional calls, 
 // as needed for example to compare a target to an item in a list, can 
-// include applying the slice() method to construct a Uniseries with 
-// *ppTarget and *ppLast as the slice() parameters, then applying one of 
-// the Uniseries compare methods.
+// include applying the ::slice() method to construct a Uniseries with 
+// *ppTarget and *ppLast as the ::slice() parameters, then applying one of 
+// the Uniseries comparion methods.
 //
 // If no match is found, or if no first wildcard is found, sets *ppFirst, 
 // *ppLast, and *ppTarget to nullptr and returns nullptr.
@@ -12733,8 +16847,8 @@ uint8_t * FastUtf8::Uniseries::pFindWild(
    }
 }
 
-// Case-insensitive implementation of the pFindWild() partial content 
-// comparison method.
+// Case-insensitive implementation of the ::pFindWild() partial content 
+// comparison method for targeted wildcard search.
 uint8_t * FastUtf8::Uniseries::casepFindWild(
    const uint8_t *pWild,        // Search pattern (with wildcards)
    uint8_t       **ppFirst,     // Updated beginning location
@@ -12848,6 +16962,1118 @@ uint8_t * FastUtf8::Uniseries::casepFindWild(
          default:
             return WildCaseFindUtf8(&pContent, sWild.getContent(), 
                       ppLast, ppTarget);
+      }
+   }
+}
+
+// The ::pFindWildSlice() partial content comparison method scans the "this" 
+// content for the inbound slice, which is expected to contain at least one 
+// '*' wildcard and also may include '?' wildcards.  See the comments for the 
+// ::pFindWild() method for targeted wildcard search.  The slice content 
+// comprises the bytes between the locations indicated by pPatternBegin and 
+// pPatternEnd.  Upon success, *ppEnd points to the location immediately after 
+// the found slice.
+uint8_t * FastUtf8::Uniseries::pFindWildSlice(
+   const uint8_t *pPatternBegin,  // Specifier (with wildcards)
+   const uint8_t *pPatternEnd,    // End of specifier
+   uint8_t       **ppBegin,       // Updated beginning location
+   uint8_t       **ppEnd,         // Returned loc where match ends
+   uint8_t       **ppTarget)      // Returned loc after last '*'
+      const noexcept
+{
+   if (ppBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE:
+            return WildCaseFindSliceUtf8(ppBegin, pPatternBegin, pPatternEnd, 
+                      ppEnd, ppTarget);
+         default:
+            return WildFindSliceUtf8(ppBegin, pPatternBegin, pPatternEnd, 
+                      ppEnd, ppTarget);
+      }
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE:
+            return WildCaseFindSliceUtf8(&pContent, pPatternBegin, pPatternEnd, 
+                      ppEnd, ppTarget);
+         default:
+            return WildFindSliceUtf8(&pContent, pPatternBegin, pPatternEnd, 
+                      ppEnd, ppTarget);
+      }
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::pFindWildSlice(
+   const char *pPatternBegin,      // Specifier (with wildcards)
+   const char *pPatternEnd,        // End of specifier
+   uint8_t    **ppBegin,           // Updated beginning location
+   uint8_t    **ppEnd,             // Updated loc where match ends
+   uint8_t    **ppTarget)          // Returned loc after last '*'
+      const noexcept
+{
+   if (ppBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE:
+            return WildCaseFindSliceUtf8(ppBegin, 
+                      reinterpret_cast<const uint8_t *> (pPatternBegin), 
+                      reinterpret_cast<const uint8_t *> (pPatternEnd), 
+                      ppEnd, ppTarget);
+         default:
+            return WildFindSliceUtf8(ppBegin, 
+                      reinterpret_cast<const uint8_t *> (pPatternBegin), 
+                      reinterpret_cast<const uint8_t *> (pPatternEnd), 
+                      ppEnd, ppTarget);
+      }
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE:
+            return WildCaseFindSliceUtf8(&pContent, 
+                      reinterpret_cast<const uint8_t *> (pPatternBegin), 
+                      reinterpret_cast<const uint8_t *> (pPatternEnd), 
+                      ppEnd, ppTarget);
+         default:
+            return WildFindSliceUtf8(&pContent, 
+                      reinterpret_cast<const uint8_t *> (pPatternBegin), 
+                      reinterpret_cast<const uint8_t *> (pPatternEnd), 
+                      ppEnd, ppTarget);
+      }
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::pFindWildSlice(
+   const Uniseries& sPattern,      // Specifier (with wildcards)
+   uint8_t    **ppBegin,           // Updated beginning location
+   uint8_t    **ppEnd,             // Updated loc where match ends
+   uint8_t    **ppTarget)          // Returned loc after last '*'
+      const noexcept
+{
+   if (ppBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE:
+            return WildCaseFindSliceUtf8(ppBegin, 
+                      sPattern.getContent(), 
+                      sPattern.getContent() + sPattern.getSize(), 
+                      ppEnd, ppTarget);
+         default:
+            return WildFindSliceUtf8(ppBegin, 
+                      sPattern.getContent(), 
+                      sPattern.getContent() + sPattern.getSize(), 
+                      ppEnd, ppTarget);
+      }
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE:
+            return WildCaseFindSliceUtf8(&pContent, 
+                      sPattern.getContent(), 
+                      sPattern.getContent() + sPattern.getSize(), 
+                      ppEnd, ppTarget);
+         default:
+            return WildFindSliceUtf8(&pContent, 
+                      sPattern.getContent(), 
+                      sPattern.getContent() + sPattern.getSize(), 
+                      ppEnd, ppTarget);
+      }
+   }
+}
+
+// Case-insensitive implementation of the ::pFindWildSlice() partial content 
+// comparison method for targeted wildcard search.
+uint8_t * FastUtf8::Uniseries::casepFindWildSlice(
+   const uint8_t *pPatternBegin,  // Specifier (with wildcards)
+   const uint8_t *pPatternEnd,    // End of specifier
+   uint8_t       **ppBegin,       // Updated beginning location
+   uint8_t       **ppEnd,         // Updated loc where match ends
+   uint8_t       **ppTarget)      // Returned loc after last '*'
+      const noexcept
+{
+   if (ppBegin)
+   {
+      return WildCaseFindSliceUtf8(ppBegin, pPatternBegin, pPatternEnd, 
+                      ppEnd, ppTarget);
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      return WildCaseFindSliceUtf8(&pContent, pPatternBegin, pPatternEnd, 
+                      ppEnd, ppTarget);
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::casepFindWildSlice(
+   const char *pPatternBegin,      // Specifier (with wildcards)
+   const char *pPatternEnd,        // End of specifier
+   uint8_t    **ppBegin,           // Updated beginning location
+   uint8_t    **ppEnd,             // Updated loc where match ends
+   uint8_t    **ppTarget)          // Returned loc after last '*'
+      const noexcept
+{
+   if (ppBegin)
+   {
+      return WildCaseFindSliceUtf8(ppBegin, 
+                      reinterpret_cast<const uint8_t *> (pPatternBegin), 
+                      reinterpret_cast<const uint8_t *> (pPatternEnd), 
+                      ppEnd, ppTarget);
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      return WildCaseFindSliceUtf8(&pContent, 
+                      reinterpret_cast<const uint8_t *> (pPatternBegin), 
+                      reinterpret_cast<const uint8_t *> (pPatternEnd), 
+                      ppEnd, ppTarget);
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::casepFindWildSlice(
+   const Uniseries& sPattern,      // Specifier (with wildcards)
+   uint8_t    **ppBegin,           // Updated beginning location
+   uint8_t    **ppEnd,             // Updated loc where match ends
+   uint8_t    **ppTarget)          // Returned loc after last '*'
+      const noexcept
+{
+   if (ppBegin)
+   {
+      return WildCaseFindSliceUtf8(ppBegin, sPattern.getContent(), 
+                      sPattern.getContent() + sPattern.getSize(), 
+                      ppEnd, ppTarget);
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      return WildCaseFindSliceUtf8(&pContent, sPattern.getContent(), 
+                      sPattern.getContent() + sPattern.getSize(), 
+                      ppEnd, ppTarget);
+   }
+}
+
+// Vectorized wildcard search.
+//
+// The ::pVectorizeWild() method performs a targeted wildcard search whose 
+// purpose is to fetch pointers corresponding to every '*' wildcard in the 
+// inbound search pattern, which also can contain '?' wildcards.  The 
+// method scans the "this" content for a first match on the overall pattern 
+// and populates a MatchVector of WildTarget entries: that is, a container 
+// of target match results, based on std::array, that resides on the 
+// stack.  Each WildTarget comprises a pointer to first code point of a 
+// portion of the content that matches a '*' wildcard, and a pointer to the 
+// code point immediately after that match.  For example, given this 
+// content and input...
+//
+// content: "This part is skipped, but here is some content to be matched."
+// *ppBegin:                          "here is some content to be matched." 
+// pPattern: "some*to*match"                            (provided by caller)
+//
+// ...that is, if the caller points *ppBegin to "here is some content to be 
+// matched", the method will provide pointers to matching locations within 
+// the content, this way:
+// 
+// return value:            " content to be matched."  (match on first '*')
+// *ppBegin:            "some content to be matched."  (overall match)
+// *ppEnd:                                      "ed."  (after overall match)
+// pTargets:  (MatchVector containing of pairs of pointers)
+//   pTargets[0].pBegin:    " content to be matched."
+//   pTargets[0].pEnd                "to be matched."
+//   pTargets[1].pBegin:               " be matched."
+//   pTargets[1].pEnd:                     "matched."
+//
+// If no match is found, or if the pattern includes no '*' wildcard, sets 
+// *ppBegin and *ppEnd to nullptr and returns nullptr.
+//
+uint8_t * FastUtf8::Uniseries::pVectorizeWild(
+       FastUtf8::MatchVector& pTargets,  // Vector of matches for each '*'
+       const uint8_t  *pPattern,     // Search pattern (with wildcards)
+       const uint8_t  *pPatternEnd,  // End of search pattern
+       uint8_t        **ppBegin,     // Updated beginning location
+       uint8_t        **ppEnd)       // Updated location after end of match
+         const noexcept
+{
+   // Calculating the pattern's end would be shorter with C-style casts.
+   uint8_t *pEnd;
+   uint8_t *pWildEnd = pPatternEnd ? const_cast<uint8_t *> (pPatternEnd) : 
+                 static_cast<int> (std::strlen((
+                        reinterpret_cast<const char *> (pPattern)))) + 
+                 const_cast<uint8_t *> (pPattern);
+
+   if (ppBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = *ppBegin + SizeOfLenUtf8(*ppBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(ppBegin, ppEnd ? ppEnd : &pEnd, pPattern, 
+                        pWildEnd, pTargets);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseVectorize(ppBegin, ppEnd, pPattern, pWildEnd, 
+                        pTargets);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = *ppBegin + SizeOfLenUtf8(*ppBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildVectorize(ppBegin, ppEnd ? ppEnd : &pEnd, pPattern, 
+                        pWildEnd, pTargets);
+         default:
+            return WildVectorize(ppBegin, ppEnd, pPattern, pWildEnd, 
+                        pTargets);
+      }
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = pContent + SizeOfLenUtf8(pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(&pContent, ppEnd ? ppEnd : &pEnd, 
+                        pPattern, pWildEnd, pTargets);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseVectorize(&pContent, ppEnd, pPattern, 
+                        pWildEnd, pTargets);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = pContent + SizeOfLenUtf8(pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildVectorize(&pContent, ppEnd ? ppEnd : &pEnd, pPattern, 
+                        pWildEnd, pTargets); 
+         default:
+            return WildVectorize(&pContent, ppEnd, pPattern, 
+                        pWildEnd, pTargets); 
+      }
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::pVectorizeWild(
+       FastUtf8::MatchVector& pTargets,  // Vector of matches for each '*'
+       const char     *pPattern,     // Search pattern (with wildcards)
+       const char     *pPatternEnd,  // End of search pattern
+       uint8_t        **ppBegin,     // Updated beginning location
+       uint8_t        **ppEnd)       // Updated location after end of match
+         const noexcept
+{
+   uint8_t *pEnd;
+   char *pWildEnd = pPatternEnd ? const_cast<char *> (pPatternEnd) : 
+                 std::strlen(pPattern) + const_cast<char *> (pPattern);
+
+   if (ppBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = *ppBegin + SizeOfLenUtf8(*ppBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(ppBegin, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd),
+                        pTargets);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseVectorize(ppBegin, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd),
+                        pTargets);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = *ppBegin + SizeOfLenUtf8(*ppBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildVectorize(ppBegin, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd),
+                        pTargets);
+         default:
+            return WildVectorize(ppBegin, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd),
+                        pTargets);
+      }
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = pContent + SizeOfLenUtf8(pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(&pContent, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd), 
+                        pTargets);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseVectorize(&pContent, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd), 
+                        pTargets);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = pContent + SizeOfLenUtf8(pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildVectorize(&pContent, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd), 
+                        pTargets);
+         default:
+            return WildVectorize(&pContent, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd), 
+                        pTargets);
+      }
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::pVectorizeWild(
+       FastUtf8::MatchVector& pTargets,  // Vector of matches for each '*'
+       const Uniseries& sPattern,   // Search pattern (with wildcards)
+       uint8_t          **ppBegin,  // Updated beginning location
+       uint8_t          **ppEnd)    // Updated location after end of match
+         const noexcept
+{
+   uint8_t *pEnd;
+
+   if (ppBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = *ppBegin + SizeOfLenUtf8(*ppBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(ppBegin, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseVectorize(ppBegin, ppEnd, sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = *ppBegin + SizeOfLenUtf8(*ppBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildVectorize(ppBegin, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+         default:
+            return WildVectorize(ppBegin, ppEnd, sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+      }
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = pContent + SizeOfLenUtf8(pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(&pContent, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseVectorize(&pContent, ppEnd, 
+                        sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = pContent + SizeOfLenUtf8(pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildVectorize(&pContent, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+         default:
+            return WildVectorize(&pContent, ppEnd, 
+                        sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+      }
+   }
+}
+
+// Case-insensitive implementation of the ::pVectorizeWild() method for 
+// vectorized wildcard search.
+uint8_t * FastUtf8::Uniseries::casepVectorizeWild(
+       FastUtf8::MatchVector& pTargets,  // Vector of matches for each '*'
+       const uint8_t  *pPattern,     // Search pattern (with wildcards)
+       const uint8_t  *pPatternEnd,  // End of search pattern
+       uint8_t        **ppBegin,  // Updated beginning location
+       uint8_t        **ppEnd)    // Updated location after end of match
+         const noexcept
+{
+   // Calculate the pattern's end.
+   uint8_t *pEnd;
+   uint8_t *pWildEnd = pPatternEnd ? const_cast<uint8_t *> (pPatternEnd) : 
+                 static_cast<int> (std::strlen((
+                        reinterpret_cast<const char *> (pPattern)))) + 
+                 const_cast<uint8_t *> (pPattern);
+
+   if (ppBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = *ppBegin + SizeOfLenUtf8(*ppBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(ppBegin, ppEnd ? ppEnd : &pEnd, pPattern, 
+                        pWildEnd, pTargets); 
+         default:
+            return WildCaseVectorize(ppBegin, ppEnd, pPattern, pWildEnd, 
+                        pTargets); 
+      }
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = pContent + SizeOfLenUtf8(pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(&pContent, ppEnd ? ppEnd : &pEnd, pPattern, 
+                        pWildEnd, pTargets);
+         default:
+            return WildCaseVectorize(&pContent, ppEnd, pPattern, 
+                        pWildEnd, pTargets);
+      }
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::casepVectorizeWild(
+       FastUtf8::MatchVector& pTargets,  // Vector of matches for each '*'
+       const char     *pPattern,     // Search pattern (with wildcards)
+       const char     *pPatternEnd,  // End of search pattern
+       uint8_t        **ppBegin,     // Updated beginning location
+       uint8_t        **ppEnd)       // Updated location after end of match
+         const noexcept
+{
+   uint8_t *pEnd;
+   char *pWildEnd = pPatternEnd ? const_cast<char *> (pPatternEnd) : 
+                 std::strlen(pPattern) + const_cast<char *> (pPattern);
+
+   if (ppBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = *ppBegin + SizeOfLenUtf8(*ppBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(ppBegin, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd),
+                        pTargets);
+         default:
+            return WildCaseVectorize(ppBegin, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd),
+                        pTargets);
+      }
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = pContent + SizeOfLenUtf8(pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(&pContent, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd),
+                        pTargets);
+         default:
+            return WildCaseVectorize(&pContent, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        reinterpret_cast<const uint8_t *> (pWildEnd),
+                        pTargets);
+      }
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::casepVectorizeWild(
+       FastUtf8::MatchVector& pTargets,  // Vector of matches for each '*'
+       const Uniseries& sPattern,   // Search pattern (with wildcards)
+       uint8_t          **ppBegin,  // Updated beginning location
+       uint8_t          **ppEnd)    // Updated location after end of match
+         const noexcept
+{
+   uint8_t *pEnd;
+
+   if (ppBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = *ppBegin + SizeOfLenUtf8(*ppBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(ppBegin, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+         default:
+            return WildCaseVectorize(ppBegin, ppEnd, sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+      }
+   }
+   else
+   {
+      uint8_t *pContent = this->m_pContent;
+
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = pContent + SizeOfLenUtf8(pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseVectorize(&pContent, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+         default:
+            return WildCaseVectorize(&pContent, ppEnd, 
+                        sPattern.getContent(), 
+                        sPattern.getContent() + sPattern.getSize(), pTargets);
+      }
+   }
+}
+
+// Hierarchical content selection via wildcards.
+//
+// The ::pSelectWild() method searches hierarchical semistructured data, 
+// such as JSON or XML, first for nested entries corresponding to leading 
+// and trailing '*' wildcards within the pattern, then (once a caller-
+// specified nesting level is reached) for a set of targets that match any 
+// remaining '*' wildcards in the middle of the pattern, which also can 
+// contain '?' wildcards.
+//
+// The method populates a std::set of vector-style containers corresponding 
+// to a nesting hierarchy that fits a pattern that contains wildcards.  The 
+// wildcards behave in their usual way, except that in addition to ordinary
+// wildcard matching, the method keeps track of hierarchical positioning 
+// within a schema, until it reaches a nesting level specified via the 
+// iLevel parameter.  To do so, the method processes outer levels of '*' 
+// wildcards as follows:
+//
+// If iLevel is 1 or more, then beginning at the location specified by the 
+// pBegin pointer, if one is specified, the method scans the "this" content 
+// for a match on the portion of the pattern prior to the zeroth '*'.  If a 
+// match is found, the method scans the remaining content for a match on 
+// the portion of the pattern after the last '*'.
+//
+// If iLevel is 2 or more, the method rescans the content for one or more 
+// matches on the portion of the pattern between the zeroth '*' and the 
+// next '*'.  For each of those matches, the method scans the remaining 
+// content for a match on the portion of the pattern after the next-to-last 
+// '*' and the last '*', stopping when it reaches the portion that has 
+// matched the last '*'.
+//
+// For further nesting levels, the method again scans the content between 
+// prior findings, for each nested match on '*' wildcards positioned 
+// subsequently from the beginning and ending of the pattern.  The method 
+// traverses the hierarchy via a depth-first search..  For example, if the 
+// method finds a match at level 2, it checks for further matches at level 
+// 2 before seeking a next match at level 1.
+//
+// Once the method reaches the nesting level specified by the iLevel value, 
+// for each overall match, it populates the inbound vector set with 
+// pointers to targets within the content matching the search pattern's 
+// remaining inner '*' wildcards.
+//
+// Example: If the caller has 5 wildcards to match within content nested 
+//    1 level deep, then just an additional 0th and 1st outermost wildcards 
+//    designate the selection to match...
+//
+// content:  "<users><user><name>Freddie</name><id>222</id></user></users>"
+// pBegin:   "<users>*<user>*<name>Fred*</name>*<id>*</id>*</user>*</users>"
+// iLevel:   1   (disclude outermost wildcards while matching inner content)
+// pResultSet:   (set of vectorized targets, accessed via code such as...)
+//
+//    for (const FastUtf8::MatchVector& mVector : pResultSet)
+//    {
+//       // ... access the matches for any selected '*' wildcard(s) here ...
+//    }
+//
+//    ...and within that loop, the results are these:
+//
+//        mVector.matches[0].pBegin: "ie</name><id>222</id></user></users>"
+//        mVector.matches[0].pEnd:     "</name><id>222</id></user></users>"
+//        mVector.matches[1].pBegin:          "<id>222</id></user></users>"
+//        mVector.matches[1].pEnd:            "<id>222</id></user></users>"
+//        mVector.matches[2].pBegin:              "222</id></user></users>"
+//        mVector.matches[2].pEnd:                   "</id></user></users>"
+//
+//                 Creating a slice between mVector.matches[2].pBegin and 
+//                 mVector.matches[2].pEnd allows the caller to find the ID 
+//                 of any user whose name starts with "Fred".
+//
+// If the above example were to include more than one line of XML content 
+// similar to the single line shown, then a short piece of code could find 
+// the IDs for multiple users whose names begin with "Fred", via a single 
+// call to ::pSelectWild().  After that call, the code could iterate over 
+// the result set creating slices for each of the mVector.matches[2].pBegin 
+// and mVector.matches[2].pEnd pointers in the set.  Further Uniseries 
+// methods could then be applied to any of the slices.
+//
+// The method returns a pointer to the overall match, i.e. to the 
+// beginning of the hierarchy corresponding to the pattern.
+//
+// In case the method finds no match, or in case there are insufficient 
+// outer '*' wildcards at each end of the pattern to accommodate the 
+// specified iLevel value, the method leaves *pResultSet initialized to 
+// nulls and returns nullptr.  In case iLevel > MAX_LEVEL, the method 
+// behaves as though iLevel == MAX_LEVEL.
+uint8_t * FastUtf8::Uniseries::pSelectWild(
+       FastUtf8::ResultSet *pResultSet,  // Set of vectors of '*' matches
+       const uint8_t *pPattern,     // Search pattern (with wildcards)
+       int           iLevel,        // Count of nested outer '*' wildcards
+       const uint8_t *pBegin,       // Location to begin search
+       uint8_t       **ppEnd)       // Updated location where search ends
+         const noexcept
+{
+   uint8_t *pEnd;
+
+   if (pBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = (uint8_t *) pBegin + SizeOfLenUtf8(pBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(pBegin, ppEnd ? ppEnd : &pEnd, pPattern, 
+                        iLevel, pResultSet);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseSelect(pBegin, ppEnd, pPattern, iLevel, pResultSet);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = (uint8_t *) pBegin + SizeOfLenUtf8(pBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildSelect(pBegin, ppEnd ? ppEnd : &pEnd, pPattern, 
+                        iLevel, pResultSet);
+         default:
+            return WildSelect(pBegin, ppEnd, pPattern, iLevel, pResultSet);
+      }
+   }
+   else
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = this->m_pContent + SizeOfLenUtf8(this->m_pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(this->m_pContent, ppEnd ? ppEnd : &pEnd, 
+                        pPattern, iLevel, pResultSet);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseSelect(this->m_pContent, ppEnd, pPattern, iLevel, 
+                        pResultSet);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = this->m_pContent + SizeOfLenUtf8(this->m_pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildSelect(this->m_pContent, ppEnd ? ppEnd : &pEnd, 
+                        pPattern, iLevel, pResultSet);
+         default:
+            return WildSelect(this->m_pContent, ppEnd, pPattern, iLevel, 
+                        pResultSet);
+      }
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::pSelectWild(
+       FastUtf8::ResultSet *pResultSet,  // Set of vectors of '*' matches
+       const char    *pPattern,     // Search pattern (with wildcards)
+       int           iLevel,        // Count of nested outer '*' wildcards
+       const uint8_t *pBegin,       // Location to begin search
+       uint8_t       **ppEnd)       // Updated location where search ends
+         const noexcept
+{
+   uint8_t *pEnd;
+
+   if (pBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = (uint8_t *) pBegin + SizeOfLenUtf8(pBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(pBegin, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern),
+                        iLevel, pResultSet);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseSelect(pBegin, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern),
+                        iLevel, pResultSet);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = (uint8_t *) pBegin + SizeOfLenUtf8(pBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildSelect(pBegin, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern),
+                        iLevel, pResultSet);
+         default:
+            return WildSelect(pBegin, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern),
+                        iLevel, pResultSet);
+      }
+   }
+   else
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = this->m_pContent + SizeOfLenUtf8(this->m_pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(this->m_pContent, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern),
+                        iLevel, pResultSet);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseSelect(this->m_pContent, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        iLevel, pResultSet);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = this->m_pContent + SizeOfLenUtf8(this->m_pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildSelect(this->m_pContent, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        iLevel, pResultSet);
+         default:
+            return WildSelect(this->m_pContent, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), 
+                        iLevel, pResultSet);
+      }
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::pSelectWild(
+       FastUtf8::ResultSet *pResultSet,  // Set of vectors of '*' matches
+       const Uniseries& sPattern,   // Search pattern (with wildcards)
+       int           iLevel,        // Count of nested outer '*' wildcards
+       const uint8_t *pBegin,       // Location to begin search
+       uint8_t       **ppEnd)       // Updated location where search ends
+         const noexcept
+{
+   uint8_t *pEnd;
+
+   if (pBegin)
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = (uint8_t *) pBegin + SizeOfLenUtf8(pBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(pBegin, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), 
+                        iLevel, pResultSet);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseSelect(pBegin, ppEnd, sPattern.getContent(), 
+                        iLevel, pResultSet);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = (uint8_t *) pBegin + SizeOfLenUtf8(pBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildSelect(pBegin, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), iLevel, pResultSet);
+         default:
+            return WildSelect(pBegin, ppEnd, sPattern.getContent(), 
+                        iLevel, pResultSet);
+      }
+   }
+   else
+   {
+      switch (this->m_metadata & (IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED))
+      {
+         case IS_CASE_INSENSITIVE | IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = this->m_pContent + SizeOfLenUtf8(this->m_pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(this->m_pContent, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), iLevel, pResultSet);
+         case IS_CASE_INSENSITIVE:
+            return WildCaseSelect(this->m_pContent, ppEnd, 
+                        sPattern.getContent(), iLevel, pResultSet);
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = this->m_pContent + SizeOfLenUtf8(this->m_pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildSelect(this->m_pContent, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), iLevel, pResultSet);
+         default:
+            return WildSelect(this->m_pContent, ppEnd, sPattern.getContent(), 
+                        iLevel, pResultSet);
+      }
+   }
+}
+
+// Case-insensitive implementation of the ::pSelectWild() method for 
+// hierarchical content selection via wildcards.
+uint8_t * FastUtf8::Uniseries::casepSelectWild(
+       FastUtf8::ResultSet *pResultSet,  // Set of vectors of '*' matches
+       const uint8_t *pPattern,     // Search pattern (with wildcards)
+       int           iLevel,        // Count of nested outer '*' wildcards
+       const uint8_t *pBegin,       // Location to begin search
+       uint8_t       **ppEnd)       // Updated location where search ends
+         const noexcept
+{
+   uint8_t *pEnd;
+
+   if (pBegin)
+   {
+      switch (this->m_metadata & IS_LENGTH_LIMITED)
+      {
+       case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = (uint8_t *) pBegin + SizeOfLenUtf8(pBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(pBegin, ppEnd ? ppEnd : &pEnd, pPattern, 
+                        iLevel, pResultSet);
+         default:
+            return WildCaseSelect(pBegin, ppEnd, pPattern, iLevel, pResultSet);
+      }
+   }
+   else
+   {
+      switch (this->m_metadata & IS_LENGTH_LIMITED)
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = this->m_pContent + SizeOfLenUtf8(this->m_pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(this->m_pContent, ppEnd ? ppEnd : &pEnd, 
+                        pPattern, iLevel, pResultSet);
+         default:
+            return WildCaseSelect(this->m_pContent, ppEnd, pPattern, iLevel, 
+                        pResultSet);
+      }
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::casepSelectWild(
+       FastUtf8::ResultSet *pResultSet,  // Set of vectors of '*' matches
+       const char    *pPattern,     // Search pattern (with wildcards)
+       int           iLevel,        // Count of nested outer '*' wildcards
+       const uint8_t *pBegin,       // Location to begin search
+       uint8_t       **ppEnd)       // Updated location where search ends
+         const noexcept
+{
+   uint8_t *pEnd;
+
+   if (pBegin)
+   {
+      switch (this->m_metadata & IS_LENGTH_LIMITED)
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = (uint8_t *) pBegin + SizeOfLenUtf8(pBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(pBegin, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), iLevel, 
+                        pResultSet);
+         default:
+            return WildCaseSelect(pBegin, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), iLevel, 
+                        pResultSet);
+      }
+   }
+   else
+   {
+      switch (this->m_metadata & IS_LENGTH_LIMITED)
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = this->m_pContent + SizeOfLenUtf8(this->m_pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(this->m_pContent, ppEnd ? ppEnd : &pEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), iLevel, 
+                        pResultSet);
+         default:
+            return WildCaseSelect(this->m_pContent, ppEnd, 
+                        reinterpret_cast<const uint8_t *> (pPattern), iLevel, 
+                        pResultSet);
+      }
+   }
+}
+
+uint8_t * FastUtf8::Uniseries::casepSelectWild(
+       FastUtf8::ResultSet *pResultSet,  // Set of vectors of '*' matches
+       const Uniseries& sPattern,   // Search pattern (with wildcards)
+       int           iLevel,        // Count of nested outer '*' wildcards
+       const uint8_t *pBegin,       // Location to begin search
+       uint8_t       **ppEnd)       // Updated location where search ends
+         const noexcept
+{
+   uint8_t *pEnd;
+
+   if (pBegin)
+   {
+      switch (this->m_metadata & IS_LENGTH_LIMITED)
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = (uint8_t *) pBegin + SizeOfLenUtf8(pBegin, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(pBegin, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), iLevel, pResultSet);
+         default:
+            return WildCaseSelect(pBegin, ppEnd, sPattern.getContent(), 
+                        iLevel, pResultSet);
+      }
+   }
+   else
+   {
+      switch (this->m_metadata & IS_LENGTH_LIMITED)
+      {
+         case IS_LENGTH_LIMITED:
+            if (!ppEnd)
+            {
+               pEnd = this->m_pContent + SizeOfLenUtf8(this->m_pContent, 
+                        this->m_metadata & LENGTH_MASK);
+            }
+
+            return WildCaseSelect(this->m_pContent, ppEnd ? ppEnd : &pEnd, 
+                        sPattern.getContent(), iLevel, pResultSet);
+         default:
+            return WildCaseSelect(this->m_pContent, ppEnd, 
+                        sPattern.getContent(), iLevel, pResultSet);
       }
    }
 }

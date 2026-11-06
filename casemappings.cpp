@@ -49,7 +49,7 @@
 extern "C"
 {
 #endif  // __cplusplus
-   // Definitions for for case mapping arrays:
+   // Definitions for for case mapping arrays.
 
    // For one-byte code points: the folded byte mapping is hard-coded here.
    extern const uint8_t CM08[CM08DataLen] = 

@@ -61,7 +61,7 @@ using std::uint32_t;
 extern "C"
 {
 #endif
-   // Declarations for case mapping arrays:
+   // Declarations for case mapping arrays.
 
    // For one-byte code points: the folded byte mapping is hard-coded in 
    // casemappings.cpp.

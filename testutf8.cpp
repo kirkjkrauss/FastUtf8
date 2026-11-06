@@ -50,8 +50,8 @@ uint64_t  g_uModeA_AccumulatedTimeUtf8;
 uint64_t  g_uModeB_AccumulatedTimeUtf8;
 uint64_t  g_uModeA_AccumulatedTimeLenUtf8;
 uint64_t  g_uModeB_AccumulatedTimeLenUtf8;
-int       g_iModeA_CallsUtf8vAscii;
-int       g_iModeB_CallsUtf8vAscii;
+int       g_iModeA_CallsUtf8;
+int       g_iModeB_CallsUtf8;
 int       g_iModeA_CallsLenUtf8vLenAscii;
 int       g_iModeB_CallsLenUtf8vLenAscii;
 
@@ -228,6 +228,8 @@ bool testcopyandduplicate(uint8_t *pContent, int lenContent)
    uint8_t *pContentCopyTerm = (uint8_t *) malloc(sizeContent);
    uint8_t *pContentCopyLen = (uint8_t *) malloc(sizeContent);
 
+   // Testing can include timing accumulation for all input.
+   bool bAccumulateFunctionTimes = g_bAccumulateFunctionTimes;
    bool bPassed = true;
 
    // Blocks for use with str*() and *DuplicateUtf8() are allocated as needed.
@@ -257,7 +259,7 @@ bool testcopyandduplicate(uint8_t *pContent, int lenContent)
    }
 
    // Null-terminated tests.
-   if (g_bAccumulateFunctionTimes)
+   if (bAccumulateFunctionTimes)
    {
       // Allocate blocks for use with str*cpy().
       pAsciiCopyTerm = (char *) malloc(strlenContent);
@@ -286,38 +288,38 @@ bool testcopyandduplicate(uint8_t *pContent, int lenContent)
    if (pContentCopyTerm)
    {
       // Get CopyUtf8() timing.
-      if (g_bAccumulateFunctionTimes)
+      if (bAccumulateFunctionTimes)
       {
          timeStart = std::chrono::high_resolution_clock::now();
       }
 
       pContentCopyTerm = CopyUtf8(pContentCopyTerm, pContent);
 
-      if (g_bAccumulateFunctionTimes)
+      if (bAccumulateFunctionTimes)
       {
          timeFinish = std::chrono::high_resolution_clock::now();
          g_uModeA_AccumulatedTimeUtf8 += 
             (std::chrono::duration_cast<std::chrono::nanoseconds>(
                               timeFinish - timeStart)).count();
-         g_iModeA_CallsUtf8vAscii++;
+         g_iModeA_CallsUtf8++;
       }
    }
 
    // Get DuplicateUtf8() timing.
-   if (g_bAccumulateFunctionTimes)
+   if (bAccumulateFunctionTimes)
    {
       timeStart = std::chrono::high_resolution_clock::now();
    }
 
    pContentDuplicateTerm = DuplicateUtf8(pContent);
 
-   if (g_bAccumulateFunctionTimes && pContentDuplicateTerm)
+   if (bAccumulateFunctionTimes && pContentDuplicateTerm)
    {
       timeFinish = std::chrono::high_resolution_clock::now();
       g_uModeB_AccumulatedTimeUtf8 += 
          (std::chrono::duration_cast<std::chrono::nanoseconds>(
                         timeFinish - timeStart)).count();
-      g_iModeB_CallsUtf8vAscii++;
+      g_iModeB_CallsUtf8++;
 
       if (!pAsciiCopyTerm || !pAsciiDuplicateTerm ||
           strcmp((char *)pContent,pAsciiCopyTerm) ||
@@ -338,7 +340,7 @@ standard library.  Expected...\n\t\t%s\n  Got...\n\t\t%s\n  And...\n\t\t%s\n",
    }
 
    // Length-limited tests.
-   if (g_bAccumulateFunctionTimes)
+   if (bAccumulateFunctionTimes)
    {
       // Get strncpy() timing.
       if (pAsciiCopyLen)
@@ -365,14 +367,14 @@ standard library.  Expected...\n\t\t%s\n  Got...\n\t\t%s\n  And...\n\t\t%s\n",
    if (pContentCopyLen)
    {
       // Get LenCopyUtf8() timing.
-      if (g_bAccumulateFunctionTimes)
+      if (bAccumulateFunctionTimes)
       {
          timeStart = std::chrono::high_resolution_clock::now();
       }
 
       pContentCopyLen = LenCopyUtf8(pContentCopyLen, pContent, sizeContent);
 
-      if (g_bAccumulateFunctionTimes)
+      if (bAccumulateFunctionTimes)
       {
          timeFinish = std::chrono::high_resolution_clock::now();
          g_uModeA_AccumulatedTimeLenUtf8 += 
@@ -383,14 +385,14 @@ standard library.  Expected...\n\t\t%s\n  Got...\n\t\t%s\n  And...\n\t\t%s\n",
    }
 
    // Get DuplicateUtf8() timing.
-   if (g_bAccumulateFunctionTimes)
+   if (bAccumulateFunctionTimes)
    {
       timeStart = std::chrono::high_resolution_clock::now();
    }
 
    pContentDuplicateLen = LenDuplicateUtf8(pContent, sizeContent);
 
-   if (g_bAccumulateFunctionTimes && pContentDuplicateTerm)
+   if (bAccumulateFunctionTimes && pContentDuplicateTerm)
    {
       timeFinish = std::chrono::high_resolution_clock::now();
       g_uModeB_AccumulatedTimeLenUtf8 += 
@@ -518,6 +520,9 @@ bool testseparateconcatenateandslice(uint8_t *pContent, uint8_t *pDelimiter,
    char *pszSlice1 = (char *) malloc(1 + strlen((char *) pContent));
    char *pszSlice2 = nullptr;
    uint8_t *pzSlice = nullptr;   // Allocated via call to *SliceUtf8().
+
+   // Testing can include timing accumulation for all input.
+   bool bAccumulateFunctionTimes = g_bAccumulateFunctionTimes;
    bool bPassed = true;
 
    // These variables are needed during steps along the way.
@@ -549,14 +554,22 @@ bool testseparateconcatenateandslice(uint8_t *pContent, uint8_t *pDelimiter,
       // buffers.
       if (pszDuplicateAscii && pszDetokenizedAscii) do
       {
-         // Get SeparateAscii() + TrimAscii() timing.
-         timeStart = std::chrono::high_resolution_clock::now();
+         if (bAccumulateFunctionTimes)
+         {
+            // Get SeparateAscii() + TrimAscii() timing.
+            timeStart = std::chrono::high_resolution_clock::now();
+         }
+
          pszAsciiPortion = TrimAscii(SeparateAscii(&pszDuplicateAscii, 
                                                    (char *) pDelimiter));
-         timeFinish = std::chrono::high_resolution_clock::now();
-         g_uModeA_AccumulatedTimeAscii += 
-              (std::chrono::duration_cast<std::chrono::nanoseconds>(
-                           timeFinish - timeStart)).count();
+
+         if (bAccumulateFunctionTimes)
+         {
+            timeFinish = std::chrono::high_resolution_clock::now();
+            g_uModeA_AccumulatedTimeAscii += 
+                 (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                              timeFinish - timeStart)).count();
+         }
 
          if (pszAsciiPortion)
          {
@@ -564,59 +577,93 @@ bool testseparateconcatenateandslice(uint8_t *pContent, uint8_t *pDelimiter,
             {
                if (bTopOfContent)
                {
-                  // Get strncat() timing.
-                  timeStart = std::chrono::high_resolution_clock::now();
+                  if (bAccumulateFunctionTimes)
+                  {
+                     // Get strncat() timing.
+                     timeStart = std::chrono::high_resolution_clock::now();
+                  }
+
                   pszDetokenizedAscii = strncat(
                       pszDetokenizedAscii, pszAsciiPortion, 
                       sizeBuf - strlen(pszDetokenizedAscii) - 1);
-                  timeFinish = std::chrono::high_resolution_clock::now();
-                  g_uModeB_AccumulatedTimeLenAscii += 
+
+                  if (bAccumulateFunctionTimes)
+                  {
+                     timeFinish = std::chrono::high_resolution_clock::now();
+                     g_uModeB_AccumulatedTimeLenAscii += 
                          (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                          timeFinish - timeStart)).count();
+                  }
+
                   bTopOfContent = false;
                }
                else
                {
-                   // Get more strncat() timing.
-                   timeStart = std::chrono::high_resolution_clock::now();
-                   pszDetokenizedAscii = strncat(
+                  if (bAccumulateFunctionTimes)
+                  {
+                     // Accumulate strncat() timing timing.
+                     timeStart = std::chrono::high_resolution_clock::now();
+                  }
+
+                  pszDetokenizedAscii = strncat(
                        pszDetokenizedAscii, " ", 
                        sizeBuf - strlen(pszDetokenizedAscii) - 1);
-                   pszDetokenizedAscii = strncat(
+                  pszDetokenizedAscii = strncat(
                        pszDetokenizedAscii, pszAsciiPortion,
                        sizeBuf - strlen(pszDetokenizedAscii) - 1);
-                   timeFinish = std::chrono::high_resolution_clock::now();
-                   g_uModeB_AccumulatedTimeLenAscii +=
-                       (std::chrono::duration_cast<std::chrono::nanoseconds>(
+
+                  if (bAccumulateFunctionTimes)
+                  {
+                     timeFinish = std::chrono::high_resolution_clock::now();
+                     g_uModeB_AccumulatedTimeLenAscii +=
+                         (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                          timeFinish - timeStart)).count();
+                  }
                }
             }
             else
             {
                if (bTopOfContent)
                {
-                  // Get strcat() timing.
-                  timeStart = std::chrono::high_resolution_clock::now();
+                  if (bAccumulateFunctionTimes)
+                  {
+                     // Accumulate strcat() timing.
+                     timeStart = std::chrono::high_resolution_clock::now();
+                  }
+
                   pszDetokenizedAscii = strcat(
                                          pszDetokenizedAscii, pszAsciiPortion);
-                  timeFinish = std::chrono::high_resolution_clock::now();
-                  g_uModeB_AccumulatedTimeAscii += 
+
+                  if (bAccumulateFunctionTimes)
+                  {
+                     timeFinish = std::chrono::high_resolution_clock::now();
+                     g_uModeB_AccumulatedTimeAscii += 
                          (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                          timeFinish - timeStart)).count();
+                  }
+
                   bTopOfContent = false;
                }
                else
                {
-                   // Get more strcat() timing.
-                   timeStart = std::chrono::high_resolution_clock::now();
-                   pszDetokenizedAscii = strcat(
+                  if (bAccumulateFunctionTimes)
+                  {
+                      // Accumulate strcat() timing.
+                      timeStart = std::chrono::high_resolution_clock::now();
+                  }
+
+                  pszDetokenizedAscii = strcat(
                                          pszDetokenizedAscii, " ");
-                   pszDetokenizedAscii = strcat(
+                  pszDetokenizedAscii = strcat(
                                          pszDetokenizedAscii, pszAsciiPortion);
-                   timeFinish = std::chrono::high_resolution_clock::now();
-                   g_uModeB_AccumulatedTimeAscii +=
-                       (std::chrono::duration_cast<std::chrono::nanoseconds>(
+
+                  if (bAccumulateFunctionTimes)
+                  {
+                     timeFinish = std::chrono::high_resolution_clock::now();
+                     g_uModeB_AccumulatedTimeAscii +=
+                         (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                          timeFinish - timeStart)).count();
+                  }
                }
             }
          }
@@ -626,15 +673,23 @@ bool testseparateconcatenateandslice(uint8_t *pContent, uint8_t *pDelimiter,
 
       if (pzDuplicateUtf8) do
       {
-         // Get SeparateUtf8() + TrimUtf8() timing [Mode A].
-         timeStart = std::chrono::high_resolution_clock::now();
+         if (bAccumulateFunctionTimes)
+         {
+            // Get SeparateUtf8() + TrimUtf8() timing [Mode A].
+            timeStart = std::chrono::high_resolution_clock::now();
+         }
+
          pzUtf8Portion = TrimUtf8(SeparateUtf8(
                                       &pzDuplicateUtf8, pDelimiter));
-         timeFinish = std::chrono::high_resolution_clock::now();
-         g_uModeA_AccumulatedTimeUtf8 += 
-              (std::chrono::duration_cast<std::chrono::nanoseconds>(
+
+         if (bAccumulateFunctionTimes)
+         {
+            timeFinish = std::chrono::high_resolution_clock::now();
+            g_uModeA_AccumulatedTimeUtf8 += 
+                 (std::chrono::duration_cast<std::chrono::nanoseconds>(
                            timeFinish - timeStart)).count();
-         g_iModeA_CallsUtf8vAscii++;
+            g_iModeA_CallsUtf8++;
+         }
 
          if (pzUtf8Portion)
          {
@@ -642,80 +697,114 @@ bool testseparateconcatenateandslice(uint8_t *pContent, uint8_t *pDelimiter,
             {
                if (bTopOfContent)
                {
-                  // Get LenConcatenateUtf8() timing: Mode B with length check.
-                  timeStart = std::chrono::high_resolution_clock::now();
-                  pzDetokenizedUtf8 = LenConcatenateUtf8(
+                  if (bAccumulateFunctionTimes)
+                  {
+                     // Get LenConcatenateUtf8() timing: Mode B with len check.
+                     timeStart = std::chrono::high_resolution_clock::now();
+                  }
+
+                 pzDetokenizedUtf8 = LenConcatenateUtf8(
                                         pzDetokenizedUtf8, sizeBuf, 
                                         pzUtf8Portion,
                                         CodePointCountUtf8(pzDetokenizedUtf8),
                                         CodePointCountUtf8(pzUtf8Portion));
-                  timeFinish = std::chrono::high_resolution_clock::now();
-                  g_uModeB_AccumulatedTimeLenUtf8 += 
+
+                  if (bAccumulateFunctionTimes)
+                  {
+                     timeFinish = std::chrono::high_resolution_clock::now();
+                     g_uModeB_AccumulatedTimeLenUtf8 += 
                          (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                         timeFinish - timeStart)).count();
+ 
+                     // Called both strncat() and LenConcatenateUtf8().
+                     g_iModeB_CallsLenUtf8vLenAscii++;
+                  }
         
-                  // Just called both strncat() and LenConcatenateUtf8().
-                  g_iModeB_CallsLenUtf8vLenAscii++;
                   bTopOfContent = false;
                }
                else
                {
-                   // Get LenConcatenateUtf8() timing [Mode B with length check].
-                   timeStart = std::chrono::high_resolution_clock::now();
-                   pzDetokenizedUtf8 = LenConcatenateUtf8(
+                  if (bAccumulateFunctionTimes)
+                  {
+                     // Get LenConcatenateUtf8() timing [Mode B with length check].
+                     timeStart = std::chrono::high_resolution_clock::now();
+                  }
+
+                  pzDetokenizedUtf8 = LenConcatenateUtf8(
                                         pzDetokenizedUtf8, sizeBuf,
                                         (uint8_t *) " ",
                                         CodePointCountUtf8(pzDetokenizedUtf8), 
                                         1);
-                   pzDetokenizedUtf8 = LenConcatenateUtf8(
+                  pzDetokenizedUtf8 = LenConcatenateUtf8(
                                         pzDetokenizedUtf8, sizeBuf,
                                         pzUtf8Portion, 
                                         CodePointCountUtf8(pzDetokenizedUtf8),
                                         CodePointCountUtf8(pzUtf8Portion));
-                   timeFinish = std::chrono::high_resolution_clock::now();
-                   g_uModeB_AccumulatedTimeLenUtf8 +=
+
+                  if (bAccumulateFunctionTimes)
+                  {
+                     timeFinish = std::chrono::high_resolution_clock::now();
+                     g_uModeB_AccumulatedTimeLenUtf8 +=
                          (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                         timeFinish - timeStart)).count();
         
-                   // Just called both strncat() and LenConcatenateUtf8() twice.
-                   g_iModeB_CallsLenUtf8vLenAscii += 2;
+                     // Called both strncat() and LenConcatenateUtf8() twice.
+                     g_iModeB_CallsLenUtf8vLenAscii += 2;
+                  }
                }
             }
             else
             {
                if (bTopOfContent)
                {
-                  // Get ConcatenateUtf8() timing [Mode B with terminating null].
-                  timeStart = std::chrono::high_resolution_clock::now();
+                  if (bAccumulateFunctionTimes)
+                  {
+                     // Get ConcatenateUtf8() timing [Mode B with terminator].
+                     timeStart = std::chrono::high_resolution_clock::now();
+                  }
+
                   pzDetokenizedUtf8 = ConcatenateUtf8(
                                         pzDetokenizedUtf8, sizeBuf, 
                                         pzUtf8Portion);
-                  timeFinish = std::chrono::high_resolution_clock::now();
-                  g_uModeB_AccumulatedTimeUtf8 += 
+
+                  if (bAccumulateFunctionTimes)
+                  {
+                     timeFinish = std::chrono::high_resolution_clock::now();
+                     g_uModeB_AccumulatedTimeUtf8 += 
                          (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                         timeFinish - timeStart)).count();
         
-                  // Just called both strcat() and ConcatenateUtf8().
-                  g_iModeB_CallsUtf8vAscii++;
+                     // Called both strcat() and ConcatenateUtf8().
+                     g_iModeB_CallsUtf8++;
+                  }
+
                   bTopOfContent = false;
                }
                else
                {
-                  // Get more ConcatenateUtf8() timing.
-                  timeStart = std::chrono::high_resolution_clock::now();
+                  if (bAccumulateFunctionTimes)
+                  {
+                     // Get more ConcatenateUtf8() timing.
+                     timeStart = std::chrono::high_resolution_clock::now();
+                  }
+
                   pzDetokenizedUtf8 = ConcatenateUtf8(
                                         pzDetokenizedUtf8, 
                                         sizeBuf, (uint8_t *) " ");
                   pzDetokenizedUtf8 = ConcatenateUtf8(
                                         pzDetokenizedUtf8, sizeBuf, 
                                         pzUtf8Portion);
-                  timeFinish = std::chrono::high_resolution_clock::now();
-                  g_uModeB_AccumulatedTimeUtf8 +=
+
+                  if (bAccumulateFunctionTimes)
+                  {
+                     timeFinish = std::chrono::high_resolution_clock::now();
+                     g_uModeB_AccumulatedTimeUtf8 +=
                          (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                         timeFinish - timeStart)).count();
          
-                  // Just called both strcat() and ConcatenateUtf8() twice.
-                  g_iModeB_CallsUtf8vAscii += 2;
+                     // Called both strcat() and ConcatenateUtf8() twice.
+                     g_iModeB_CallsUtf8 += 2;
+                  }
                }
             }
          }
@@ -736,7 +825,7 @@ bool testseparateconcatenateandslice(uint8_t *pContent, uint8_t *pDelimiter,
 
    if (!pszDetokenizedAscii)
    {
-      if (g_bAccumulateFunctionTimes)
+      if (bAccumulateFunctionTimes)
       {
          // Content separation or concatenation failure.
          bPassed = (sizeAscii != 0);
@@ -748,7 +837,7 @@ bool testseparateconcatenateandslice(uint8_t *pContent, uint8_t *pDelimiter,
       // code points.  The first code blocks flesh out an ASCII version that 
       // could serve for performance comparison, but this test presently 
       // skips any actual comparison.
-      if (g_bAccumulateFunctionTimes)
+      if (bAccumulateFunctionTimes)
       {
          if (iFirst < 0)
          {
@@ -778,7 +867,7 @@ bool testseparateconcatenateandslice(uint8_t *pContent, uint8_t *pDelimiter,
                 (char *) pExpectedSlice, (char *) pszSlice1);
       }
 
-      if (g_bAccumulateFunctionTimes)
+      if (bAccumulateFunctionTimes)
       {
          // Invoke our ASCII slice routines to get the content between the first 
          // and last index.
@@ -897,6 +986,9 @@ bool testcompare(uint8_t *pContentA, uint8_t *pContentB, int lenContent,
    size_t nSize;           // Size of longer inbound content, in bytes
    size_t nSizeContentB;   // Size of content B
    int    iCmp;            // str*cmp() result
+
+   // Testing can include timing accumulation for all input.
+   bool bAccumulateFunctionTimes = g_bAccumulateFunctionTimes;
    bool   bPassed = true;
    std::chrono::time_point<std::chrono::high_resolution_clock> timeStart;
    std::chrono::time_point<std::chrono::high_resolution_clock> timeFinish;
@@ -906,7 +998,7 @@ bool testcompare(uint8_t *pContentA, uint8_t *pContentB, int lenContent,
       if (bCase)
       {
          // Null-terminated, case-insensitive test.
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeStart = std::chrono::high_resolution_clock::now();
             iCmp = strcasecmp((char *) pContentA, (char *) pContentB);
@@ -928,19 +1020,19 @@ bool testcompare(uint8_t *pContentA, uint8_t *pContentB, int lenContent,
             bPassed = false;
          }
 
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeB_AccumulatedTimeUtf8 += 
                (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                  timeFinish - timeStart)).count();
-            g_iModeB_CallsUtf8vAscii++;
+            g_iModeB_CallsUtf8++;
          }
       }
       else
       {
          // Null-terminated, case-sensitive test.
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeStart = std::chrono::high_resolution_clock::now();
             iCmp = strcmp((char *) pContentA, (char *) pContentB);
@@ -962,13 +1054,13 @@ bool testcompare(uint8_t *pContentA, uint8_t *pContentB, int lenContent,
             bPassed = false;
          }
 
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeA_AccumulatedTimeUtf8 += 
                 (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                   timeFinish - timeStart)).count();
-            g_iModeA_CallsUtf8vAscii++;                  
+            g_iModeA_CallsUtf8++;                  
          }
       }
    }
@@ -977,7 +1069,7 @@ bool testcompare(uint8_t *pContentA, uint8_t *pContentB, int lenContent,
       if (bCase)
       {
          // Length-limited, case-insensitive test.
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeStart = std::chrono::high_resolution_clock::now();
             iCmp = strncasecmp((char *) pContentA, 
@@ -1002,7 +1094,7 @@ bool testcompare(uint8_t *pContentA, uint8_t *pContentB, int lenContent,
             bPassed = false;
          }
 
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeB_AccumulatedTimeLenUtf8 += 
@@ -1014,7 +1106,7 @@ bool testcompare(uint8_t *pContentA, uint8_t *pContentB, int lenContent,
       else
       {
          // Length-limited, case-sensitive test.
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeStart = std::chrono::high_resolution_clock::now();
             iCmp = strncmp((char *) pContentA, 
@@ -1039,7 +1131,7 @@ bool testcompare(uint8_t *pContentA, uint8_t *pContentB, int lenContent,
             bPassed = false;
          }
          
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeA_AccumulatedTimeLenUtf8 += 
@@ -1101,6 +1193,9 @@ bool testfind(uint8_t *pContent, uint8_t *pPattern,
    uint8_t *pSlice, *pSliceEnd;
    char    *pszSlice, *pszSliceEnd;
    int     iOffset;
+
+   // Testing can include timing accumulation for all input.
+   bool bAccumulateFunctionTimes = g_bAccumulateFunctionTimes;
    bool    bPassed = true;
    std::chrono::time_point<std::chrono::high_resolution_clock> timeStart;
    std::chrono::time_point<std::chrono::high_resolution_clock> timeFinish;
@@ -1110,7 +1205,7 @@ bool testfind(uint8_t *pContent, uint8_t *pPattern,
       if (bCase)
       {
          // Null-terminated, case-insensitive (Mode B) test.
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeStart = std::chrono::high_resolution_clock::now();
             pszSlice = strcasestr((char *) pContent, (char *) pPattern);
@@ -1124,19 +1219,19 @@ bool testfind(uint8_t *pContent, uint8_t *pPattern,
 
          pSlice = CaseFindUtf8(pContent, pPattern, &pSliceEnd);
 
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeB_AccumulatedTimeUtf8 += 
                (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                     timeFinish - timeStart)).count();
-            g_iModeB_CallsUtf8vAscii++;
+            g_iModeB_CallsUtf8++;
          }
       }
       else
       {
          // Null-terminated, case-sensitive (Mode A) test.
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeStart = std::chrono::high_resolution_clock::now();
             pszSlice = strstr((char *) pContent, (char *) pPattern);
@@ -1150,13 +1245,13 @@ bool testfind(uint8_t *pContent, uint8_t *pPattern,
          
          pSlice = FindUtf8(pContent, pPattern, &pSliceEnd);
          
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeA_AccumulatedTimeUtf8 += 
                (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                  timeFinish - timeStart)).count();
-            g_iModeA_CallsUtf8vAscii++;
+            g_iModeA_CallsUtf8++;
          }
       }
    }
@@ -1165,7 +1260,7 @@ bool testfind(uint8_t *pContent, uint8_t *pPattern,
       if (bCase)
       {
          // Length-limited, case-insensitive (Mode B) test.
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeStart = std::chrono::high_resolution_clock::now();
             pszSlice = LenCaseFindAscii((char *) pContent, 
@@ -1182,7 +1277,7 @@ bool testfind(uint8_t *pContent, uint8_t *pPattern,
          pSlice = LenCaseFindUtf8(pContent, pPattern, 
                       lenContent, lenSliceContent, &pSliceEnd);
 
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeB_AccumulatedTimeLenUtf8 += 
@@ -1194,7 +1289,7 @@ bool testfind(uint8_t *pContent, uint8_t *pPattern,
       else
       {
          // Length-limited, case-sensitive (Mode A) test.
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeStart = std::chrono::high_resolution_clock::now();
             pszSlice = LenFindAscii((char *) pContent, 
@@ -1211,7 +1306,7 @@ bool testfind(uint8_t *pContent, uint8_t *pPattern,
          pSlice = LenFindUtf8(pContent, pPattern, 
                       lenContent, lenSliceContent, &pSliceEnd);
          
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeA_AccumulatedTimeLenUtf8 += 
@@ -1231,7 +1326,7 @@ bool testfind(uint8_t *pContent, uint8_t *pPattern,
          bPassed = false;
       }
 
-      if (g_bAccumulateFunctionTimes)
+      if (bAccumulateFunctionTimes)
       {
          if ((uint8_t *) pszSlice != pSlice)
          {
@@ -1262,6 +1357,7 @@ bool testwildcompare(uint8_t *pTame, uint8_t *pWild,
                       int lenTame, int lenWild,
                       bool bCase, bool bExpectedResult)
 {
+   bool bAccumulateFunctionTimes = g_bAccumulateFunctionTimes;
    bool bPassed = true;
    std::chrono::time_point<std::chrono::high_resolution_clock> timeStart;
    std::chrono::time_point<std::chrono::high_resolution_clock> timeFinish;
@@ -1279,7 +1375,7 @@ bool testwildcompare(uint8_t *pTame, uint8_t *pWild,
       else
       {
          // Null-terminated, case-sensitive test.
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeStart = std::chrono::high_resolution_clock::now();
 
@@ -1301,13 +1397,13 @@ bool testwildcompare(uint8_t *pTame, uint8_t *pWild,
             bPassed = false;
          }
 
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeA_AccumulatedTimeUtf8 += 
                 (std::chrono::duration_cast<std::chrono::nanoseconds>(
                                          timeFinish - timeStart)).count();
-            g_iModeA_CallsUtf8vAscii++;                  
+            g_iModeA_CallsUtf8++;                  
          }
       }
    }
@@ -1325,7 +1421,7 @@ bool testwildcompare(uint8_t *pTame, uint8_t *pWild,
       else
       {
          // Length-limited, case-sensitive test.
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeStart = std::chrono::high_resolution_clock::now();
          }
@@ -1336,7 +1432,7 @@ bool testwildcompare(uint8_t *pTame, uint8_t *pWild,
             bPassed = false;
          }
          
-         if (g_bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeA_AccumulatedTimeLenUtf8 += 
@@ -1375,11 +1471,20 @@ bool testwildcompare(uint8_t *pTame, uint8_t *pWild,
 //   WildLenCaseFindUtf8()
 //
 // Accumulates timings for performance rollups for ASCII tests.  The g_noMatch 
-// values for expectedMatch and bExpectedTarget apply to content without 
+// values for expectedMatch and expectedTarget apply to content without 
 // wildcards and are used to direct verification toward [Len][Case]FindUtf8() 
 // rather than toward Wild[Len][Case]FindUtf8().  Performance rollups 
 // nevertheless include the timings related to positive and negative findings 
-// from the functions under test.
+// from the functions under test.  Testing can include these accumulated 
+// timings:
+//  g_uModeA_AccumulatedTimeUtf8 stores time for WildFindUtf8() and 
+//     WildCaseFindUtf8();
+//  g_uModeB_AccumulatedTimeUtf8 stores time for FindUtf8() and CaseFindUtf8(),
+//  g_uModeB_AccumulatedTimeAscii stores time for strstr() and CaseFindAscii(), 
+//  g_uModeA_AccumulatedTimeLenUtf8 stores time for WildLenFindUtf8() and 
+//     WildLenCaseFindUtf8(); and 
+//  g_uModeB_AccumulatedTimeLenUtf8 stores time for LenFindUtf8() and 
+//     LenCaseFindUtf8().
 //
 bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent, 
                   int lenPattern, size_t expectedFirst, size_t expectedLast, 
@@ -1392,7 +1497,7 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
    bool bPassed = true;
    int  len = CodePointCountUtf8(pContent);
    bool bAscii = !LenValidateUtf8(pContent, lenContent ? lenContent : len);
-   bool bAccumulateFunctionTimes = bAscii ? g_bAccumulateFunctionTimes : false;
+   bool bAccumulateFunctionTimes = g_bAccumulateFunctionTimes;
    std::chrono::time_point<std::chrono::high_resolution_clock> timeStart;
    std::chrono::time_point<std::chrono::high_resolution_clock> timeFinish;
 
@@ -1426,7 +1531,7 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
             bPassed = false;
          }
 
-         if (bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes && bAscii)
          {
             g_uModeB_AccumulatedTimeUtf8 += 
                 (std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -1473,7 +1578,7 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
                   (size_t) (pMatch - pContent) != expectedMatch ||
                   (size_t) (pTarget - pContent) != expectedTarget))
              {
-                 bPassed = false;
+                bPassed = false;
              }
          }
          else if (pMatch)
@@ -1486,7 +1591,7 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
             g_uModeA_AccumulatedTimeUtf8 += 
                 (std::chrono::duration_cast<std::chrono::nanoseconds>(
                       timeFinish - timeStart)).count();
-            g_iModeA_CallsUtf8vAscii++;                  
+            g_iModeA_CallsUtf8++;                  
          }
       }
       else
@@ -1512,7 +1617,7 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
             bPassed = false;
          }
 
-         if (bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes && bAscii)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeB_AccumulatedTimeAscii += 
@@ -1531,7 +1636,7 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
             }
             else if (pFirst && len)
             {
-                bPassed = false;
+               bPassed = false;
             }
 
             timeFinish = std::chrono::high_resolution_clock::now();
@@ -1548,6 +1653,10 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
          if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
+            g_uModeA_AccumulatedTimeUtf8 += 
+                (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      timeFinish - timeStart)).count();
+            g_iModeA_CallsUtf8++;                  
          }
 
          if (expectedMatch != g_noMatch)
@@ -1563,15 +1672,7 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
          }
          else if (pMatch)
          {
-             bPassed = false;
-         }
-
-         if (bAccumulateFunctionTimes)
-         {
-            g_uModeA_AccumulatedTimeUtf8 += 
-                (std::chrono::duration_cast<std::chrono::nanoseconds>(
-                      timeFinish - timeStart)).count();
-            g_iModeA_CallsUtf8vAscii++;                  
+            bPassed = false;
          }
       }
    }
@@ -1588,58 +1689,70 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
          pFirst = LenCaseFindUtf8(
                       pContent, pPattern, lenContent, lenPattern, &pLast);
 
+         if (bAccumulateFunctionTimes)
+         {
+            timeFinish = std::chrono::high_resolution_clock::now();
+         }
+
          if (expectedTarget == g_noMatch)
          {
             if ((size_t) (pFirst - pContent) != expectedFirst ||
                 (size_t) (pLast - pContent) != expectedLast)
             {
-                bPassed = false;
+               bPassed = false;
             }
          }
          else if (pFirst && len)
          {
-             bPassed = false;
+            bPassed = false;
          }
 
-         if (bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes && bAscii)
          {
-            timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeB_AccumulatedTimeLenUtf8 += 
                 (std::chrono::duration_cast<std::chrono::nanoseconds>(
                       timeFinish - timeStart)).count();
             timeStart = std::chrono::high_resolution_clock::now();
-            pFirst= (uint8_t *) LenCaseFindAscii(
+            pFirst = (uint8_t *) LenCaseFindAscii(
                       (char *) pContent, (char *) pPattern, lenContent, 
                       lenPattern, (char **) &pLast);
+            timeFinish = std::chrono::high_resolution_clock::now();
 
             if (expectedTarget == g_noMatch)
             {
                if ((size_t) (pFirst - pContent) != expectedFirst ||
                    (size_t) (pLast - pContent) != expectedLast)
                {
-                   bPassed = false;
+                  bPassed = false;
                }
             }
             else if (pFirst && len)
             {
-                bPassed = false;
+               bPassed = false;
             }
 
-            timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeB_AccumulatedTimeLenAscii += 
                 (std::chrono::duration_cast<std::chrono::nanoseconds>(
                       timeFinish - timeStart)).count();
-
-            timeStart = std::chrono::high_resolution_clock::now();
          }
 
          pFirst = pContent;
+
+         if (bAccumulateFunctionTimes)
+         {
+            timeStart = std::chrono::high_resolution_clock::now();
+         }
+
          pMatch = WildLenCaseFindUtf8(&pFirst, pPattern, lenContent, 
                       lenPattern, &pLast, &pTarget);
 
          if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
+            g_uModeA_AccumulatedTimeLenUtf8 += 
+                (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      timeFinish - timeStart)).count();
+            g_iModeA_CallsUtf8++;                  
          }
 
          if (expectedMatch != g_noMatch)
@@ -1650,20 +1763,12 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
                   (size_t) (pMatch - pContent) != expectedMatch ||
                   (size_t) (pTarget - pContent) != expectedTarget))
              {
-                 bPassed = false;
+                bPassed = false;
              }
          }
          else if (pMatch)
          {
-             bPassed = false;
-         }
-
-         if (bAccumulateFunctionTimes)
-         {
-            g_uModeA_AccumulatedTimeLenUtf8 += 
-                (std::chrono::duration_cast<std::chrono::nanoseconds>(
-                      timeFinish - timeStart)).count();
-            g_iModeA_CallsUtf8vAscii++;                  
+            bPassed = false;
          }
       }
       else
@@ -1677,59 +1782,71 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
          pFirst = LenFindUtf8(
                       pContent, pPattern, lenContent, lenPattern, &pLast);
 
+         if (bAccumulateFunctionTimes)
+         {
+            timeFinish = std::chrono::high_resolution_clock::now();
+         }
+
          if (expectedTarget == g_noMatch)
          {
             if ((size_t) (pFirst - pContent) != expectedFirst ||
                 (size_t) (pLast - pContent) != expectedLast)
             {
-                bPassed = false;
+               bPassed = false;
             }
          }
          else if (pFirst && len)
          {
-             bPassed = false;
+            bPassed = false;
          }
 
-         if (bAccumulateFunctionTimes)
+         if (bAccumulateFunctionTimes && bAscii)
          {
-            timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeB_AccumulatedTimeLenUtf8 += 
                 (std::chrono::duration_cast<std::chrono::nanoseconds>(
                       timeFinish - timeStart)).count();
 
             timeStart = std::chrono::high_resolution_clock::now();
-            pFirst= (uint8_t *) LenFindAscii(
+            pFirst = (uint8_t *) LenFindAscii(
                       (char *) pContent, (char *) pPattern, lenContent, 
                       lenPattern, (char **) &pLast);
+            timeFinish = std::chrono::high_resolution_clock::now();
 
             if (expectedTarget == g_noMatch)
             {
                if ((size_t) (pFirst - pContent) != expectedFirst ||
                    (size_t) (pLast - pContent) != expectedLast)
                {
-                   bPassed = false;
+                  bPassed = false;
                }
             }
             else if (pFirst && len)
             {
-                bPassed = false;
+               bPassed = false;
             }
 
-            timeFinish = std::chrono::high_resolution_clock::now();
             g_uModeB_AccumulatedTimeLenAscii += 
                 (std::chrono::duration_cast<std::chrono::nanoseconds>(
                       timeFinish - timeStart)).count();
-
-            timeStart = std::chrono::high_resolution_clock::now();
          }
 
          pFirst = pContent;
+
+         if (bAccumulateFunctionTimes)
+         {
+            timeStart = std::chrono::high_resolution_clock::now();
+         }
+
          pMatch = WildLenFindUtf8(&pFirst, pPattern, lenContent, lenPattern, 
                       &pLast, &pTarget);
 
          if (bAccumulateFunctionTimes)
          {
             timeFinish = std::chrono::high_resolution_clock::now();
+            g_uModeA_AccumulatedTimeLenUtf8 += 
+                (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      timeFinish - timeStart)).count();
+            g_iModeA_CallsUtf8++;                  
          }
 
          if (expectedMatch != g_noMatch)
@@ -1740,20 +1857,279 @@ bool testwildfind(uint8_t *pContent, uint8_t *pPattern, int lenContent,
                   (size_t) (pMatch - pContent) != expectedMatch ||
                   (size_t) (pTarget - pContent) != expectedTarget))
              {
-                 bPassed = false;
+                bPassed = false;
              }
          }
          else if (pMatch)
          {
-             bPassed = false;
+            bPassed = false;
          }
+      }
+   }
 
-         if (bAccumulateFunctionTimes)
+   return bPassed;
+}
+
+// Compares a content pair via each included routine for slice search and for 
+// vectorized wildcard search.
+//
+// When expectedTarget == g_noMatch (-1), an exact match is expected, not a 
+// wildcard match.  The test will verify results from these functions:
+//
+//   FindSliceUtf8()
+//   CaseFindSliceUtf8()
+// 
+// When expectedMatch == g_noMatch, neither a wildcard match nor an exact 
+// match is expected.
+//
+// When expectedMatch and expectedTarget are set to positive integers, the 
+// test will verify results from these functions:
+//
+//   WildFindSliceUtf8()
+//   WildCaseFindSliceUtf8()
+//   WildVectorize()
+//   WildCaseVectorize()
+//
+// Accumulates timings for performance rollups for ASCII tests.  The g_noMatch 
+// values for expectedMatch and expectedTarget apply to content without 
+// wildcards and are used to direct verification toward [Case]FindSliceUtf8() 
+// rather than toward Wild[Case]FindSliceUtf8().  Performance rollups include 
+// the timings related to positive and negative findings from the functions 
+// under test.  Testing can include these accumulated 
+// timings:
+//  g_uModeA_AccumulatedTimeUtf8 stores time for WildFindSliceUtf8() and 
+//     WildCaseFindSliceUtf8();
+//  g_uModeB_AccumulatedTimeUtf8 stores time for WildVectorize() and 
+//     WildCaseVectorize().
+//
+bool testwildfindslice(uint8_t *pContent, uint8_t *pPattern, int lenContent, 
+                  int lenPattern, size_t expectedBegin, size_t expectedEnd, 
+                  size_t expectedMatch, size_t expectedTarget, bool bCase, 
+                  int iTarget)
+{
+   // Wildcard-driven slice search seeks a first match and a target match.
+   uint8_t *pMatch;
+   uint8_t *pTargetFound;
+   uint8_t *pTargetVectorized;
+
+   // Vectorized wildcard search seeks to populate an array of matches, one 
+   // entry per each '*' wildcard.
+   FastUtf8::MatchVector pVector;
+
+   // These values may be updated by the functions under test.
+   uint8_t *pBegin;
+   uint8_t *pEnd;
+
+   // All of the functions under test seek slices within slices.
+   int     len = CodePointCountUtf8(pContent);
+   size_t  sizeContent = lenContent ? SizeOfLenUtf8(pContent, lenContent) : 
+                                       SizeOfUtf8(pContent);
+   size_t  sizePattern = lenPattern ? SizeOfLenUtf8(pPattern, lenPattern) : 
+                                       SizeOfUtf8(pPattern);
+   uint8_t *pContentEnd = pContent + sizeContent;
+   uint8_t *pPatternEnd = pPattern + sizePattern;
+
+   // Testing can include timing accumulation for all input.
+   bool bAccumulateFunctionTimes = g_bAccumulateFunctionTimes;
+   bool bPassed = true;
+   std::chrono::time_point<std::chrono::high_resolution_clock> timeStart;
+   std::chrono::time_point<std::chrono::high_resolution_clock> timeFinish;
+
+   // Slice search.
+   if (bCase)
+   {
+      // Case-insensitive test.
+      pEnd = pContentEnd;
+      pBegin = CaseFindSliceUtf8(pContent, pPattern, pPatternEnd, &pEnd);
+
+      if (expectedTarget == g_noMatch)
+      {
+         if ((size_t) (pBegin - pContent) != expectedBegin ||
+             (size_t) (pEnd - pContent) != expectedEnd)
          {
-            g_uModeA_AccumulatedTimeLenUtf8 += 
-                (std::chrono::duration_cast<std::chrono::nanoseconds>(
-                      timeFinish - timeStart)).count();
-            g_iModeA_CallsUtf8vAscii++;                  
+            bPassed = false;
+         }
+      }
+      else if (pBegin && len)
+      {
+         bPassed = false;
+      }
+
+      pEnd = pContentEnd;
+      pBegin = pContent;
+
+      if (bAccumulateFunctionTimes)
+      {
+         timeStart = std::chrono::high_resolution_clock::now();
+      }
+
+      pMatch = WildCaseFindSliceUtf8(
+                   &pBegin, pPattern, pPatternEnd, &pEnd, &pTargetFound);
+
+      if (bAccumulateFunctionTimes)
+      {
+         timeFinish = std::chrono::high_resolution_clock::now();
+         g_uModeA_AccumulatedTimeUtf8 += 
+             (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   timeFinish - timeStart)).count();
+         g_iModeA_CallsUtf8++;                  
+      }
+
+      if (expectedMatch != g_noMatch)
+      {
+          if (len &&
+              ((size_t) (pBegin - pContent) != expectedBegin ||
+               (size_t) (pEnd - pContent) != expectedEnd ||
+               (size_t) (pMatch - pContent) != expectedMatch ||
+               (size_t) (pTargetFound - pContent) != expectedTarget))
+          {
+             bPassed = false;
+          }
+      }
+      else if (pMatch)
+      {
+         bPassed = false;
+      }
+   }
+   else
+   {
+      // Case-sensitive test.
+      pEnd = pContentEnd;
+      pBegin = FindSliceUtf8(pContent, pPattern, pPatternEnd, &pEnd);
+
+      if (expectedTarget == g_noMatch)
+      {
+         if ((size_t) (pBegin - pContent) != expectedBegin ||
+             (size_t) (pEnd - pContent) != expectedEnd)
+         {
+            bPassed = false;
+         }
+      }
+      else if (pBegin && len)
+      {
+         bPassed = false;
+      }
+
+      pEnd = pContentEnd;
+      pBegin = pContent;
+
+      if (bAccumulateFunctionTimes)
+      {
+         timeStart = std::chrono::high_resolution_clock::now();
+      }
+
+      pMatch = WildFindSliceUtf8(
+                   &pBegin, pPattern, pPatternEnd, &pEnd, &pTargetFound);
+
+      if (bAccumulateFunctionTimes)
+      {
+         timeFinish = std::chrono::high_resolution_clock::now();
+         g_uModeA_AccumulatedTimeUtf8 += 
+             (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   timeFinish - timeStart)).count();
+         g_iModeA_CallsUtf8++;                  
+      }
+
+      if (expectedMatch != g_noMatch)
+      {
+         if (len && 
+             ((size_t) (pBegin - pContent) != expectedBegin ||
+              (size_t) (pEnd - pContent) != expectedEnd ||
+              (size_t) (pMatch - pContent) != expectedMatch ||
+              (size_t) (pTargetFound - pContent) != expectedTarget))
+         {
+            bPassed = false;
+         }
+      }
+      else if (pMatch)
+      {
+         bPassed = false;
+      }
+   }
+
+   // Vectorized wildcard search.
+   pEnd = pContentEnd;
+   pBegin = pContent;
+
+   if (bCase)
+   {
+      // Case-insensitive test.
+      if (bAccumulateFunctionTimes)
+      {
+         timeStart = std::chrono::high_resolution_clock::now();
+      }
+
+      pMatch = FastUtf8::WildCaseVectorize(
+                      &pBegin, &pEnd, pPattern, pPatternEnd, pVector);
+
+      if (bAccumulateFunctionTimes)
+      {
+         timeFinish = std::chrono::high_resolution_clock::now();
+         g_uModeB_AccumulatedTimeUtf8 += 
+             (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   timeFinish - timeStart)).count();
+         g_iModeB_CallsUtf8++;                  
+      }
+
+      if ((const std::size_t) iTarget < MAX_MATCHES)
+      {
+         pTargetVectorized = pVector.matches.at(iTarget).pEnd;
+
+         if (expectedMatch != g_noMatch)
+         {
+            if (len &&
+                 ((size_t) (pBegin - pContent) != expectedBegin ||
+                  (size_t) (pEnd - pContent) != expectedEnd ||
+                  (size_t) (pMatch - pContent) != expectedMatch ||
+                  (size_t) (pTargetVectorized - pContent) != expectedTarget))
+            {
+               bPassed = false;
+            }
+         }
+         else if (pMatch)
+         {
+            bPassed = false;
+         }
+      }
+   }
+   else
+   {
+      // Case-sensitive test.
+      if (bAccumulateFunctionTimes)
+      {
+         timeStart = std::chrono::high_resolution_clock::now();
+      }
+
+      pMatch = FastUtf8::WildVectorize(
+                      &pBegin, &pEnd, pPattern, pPatternEnd, pVector);
+
+      if (bAccumulateFunctionTimes)
+      {
+         timeFinish = std::chrono::high_resolution_clock::now();
+         g_uModeB_AccumulatedTimeUtf8 += 
+             (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   timeFinish - timeStart)).count();
+         g_iModeB_CallsUtf8++;                  
+      }
+
+      if ((const std::size_t) iTarget < MAX_MATCHES)
+      {
+         pTargetVectorized = pVector.matches.at(iTarget).pEnd;
+
+         if (expectedMatch != g_noMatch)
+         {
+            if (len &&
+                 ((size_t) (pBegin - pContent) != expectedBegin ||
+                  (size_t) (pEnd - pContent) != expectedEnd ||
+                  (size_t) (pMatch - pContent) != expectedMatch ||
+                  (size_t) (pTargetVectorized - pContent) != expectedTarget))
+            {
+               bPassed = false;
+            }
+         }
+         else if (pMatch)
+         {
+            bPassed = false;
          }
       }
    }
@@ -6536,7 +6912,7 @@ bool testset_targetedsearch_latin(void)
       expectedMatch = 14;
       expectedTarget = 26;
       bAllPassed &= testwildfind(
-          (uint8_t * )"¯\\(ツ)/¯xxxx*zzzzzzzzy*f♖l℻ Я", (uint8_t *) "xxx*zzy*f♖l",
+          (uint8_t * ) "¯\\(ツ)/¯xxxx*zzzzzzzzy*f♖l℻ Я", (uint8_t *) "xxx*zzy*f♖l",
           CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯xxxx*zzzzzzzzy*f"),
           CodePointCountUtf8((uint8_t *) "xxx*zzy*f"),
           expectedFirst, expectedLast, expectedMatch, expectedTarget, bCase);
@@ -6851,12 +7227,11 @@ bool testset_targetedsearch_latin(void)
 
       if (bCase)
       {
-          expectedLast = 3;
+         expectedLast = 3;
       }
       else
       {
-          expectedFirst = expectedLast = expectedTarget = 0;
-          expectedMatch = g_noMatch;
+         expectedLast = expectedTarget = 0;
       }
 
       bAllPassed &= testwildfind(
@@ -6866,10 +7241,7 @@ bool testset_targetedsearch_latin(void)
          expectedFirst, expectedLast, expectedMatch, expectedTarget, bCase);
 
       // Simple mixed matching wildcards test suggested by Marlin Deckert.
-      expectedFirst = 0;
-      expectedLast = 0;
-      expectedMatch = 0;
-      expectedTarget = 0;
+      expectedFirst = expectedLast = expectedMatch = expectedTarget = 0;
       bAllPassed &= testwildfind(
          (uint8_t *) "a", (uint8_t *) "*?", 
          iRelyNull, iRelyNull, 
@@ -7389,7 +7761,7 @@ bool testset_targetedsearch_tame(void)
       expectedFirst = 13;
       expectedLast = 18;
       expectedMatch = 17;
-      expectedTarget = 17;
+      expectedTarget = 19;
       bAllPassed &= testwildfind(
           (uint8_t *) "ℵ★🪐✷a12b12", (uint8_t *) "a12b*", iRelyNull, iRelyNull,
           expectedFirst, expectedLast, expectedMatch, expectedTarget, bCase);
@@ -8515,6 +8887,7 @@ bool testset_targetedsearch_global(void)
          expectedFirst, expectedLast, expectedMatch, expectedTarget, 
          /* bCase = */ true);
 
+      // An all-tame scenario.
       expectedFirst = 20;
       expectedLast = 75;
       expectedTarget = expectedMatch = g_noMatch;
@@ -8744,12 +9117,2532 @@ bool testset_targetedsearch_global(void)
    return bAllPassed;
 }
 
+//
+// Tests for slice search and for vectorized wildcard search involve these 
+// functions:
+//    FindSliceUtf8()
+//    CaseFindSliceUtf8()
+//    WildFindSliceUtf8()
+//    WildCaseFindSliceUtf8()
+//    FastUtf8::WildVectorize()
+//    FastUtf8::WildCaseVectorize()
+//
+// Each of the above functions is designed to seek a slice of content within a 
+// larger slice.  This first set of slice search tests involves 7-bit ASCII 
+// characters.
+//
+bool testset_slicesearch_latin(void)
+{
+   bool bCase = false;      // Perform case-sensitive tests on the first pass.
+
+   int  nReps;
+   int  iRelyNull = 0;      // Rely on null string terminators.
+   bool bAllPassed = true;
+   size_t expectedBegin, expectedEnd, expectedMatch, expectedTarget;
+
+   if (g_bComparePerformance)
+   {
+      // Can choose as many repetitions as you might expect in production.
+      nReps = g_iTestRepetitions;
+   }
+   else
+   {
+      nReps = 1;
+   }
+
+   while (nReps--)
+   {
+      // Case with first wildcard after total match.
+      expectedBegin = 11;
+      expectedEnd = 13;
+      expectedMatch = 13;
+      expectedTarget = 13;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "¯\\(ツ)/¯Hi", (uint8_t *) "Hi*", 
+         CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯Hi"), 
+         CodePointCountUtf8((uint8_t *) "Hi*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      
+      // Case with mismatch after '*'
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "¯\\(ツ)/¯abc", (uint8_t *) "ab*d", 
+         CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯abc"), 
+         CodePointCountUtf8((uint8_t *) "ab*d"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Cases with repeating character sequences.
+      expectedBegin = 0;
+      expectedEnd = 17;
+      expectedMatch = 0;
+      expectedTarget = 14;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "¯\\(ツ)/¯abcccd", (uint8_t *) "*ccd", 
+         CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯abcccd"), 
+         CodePointCountUtf8((uint8_t *) "*ccd"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "¯\\(ツ)/¯mississipisippi", (uint8_t *) "*issip*ss*", 
+         CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯mississipisippi"), 
+         CodePointCountUtf8((uint8_t *) "*issip*ss*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 2);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "¯\\(ツ)/¯xxxx*zzzzzzzzy*f", (uint8_t *) "xxxx*zzy*fffff", 
+         CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯xxxx*zzzzzzzzy*f"), 
+         CodePointCountUtf8((uint8_t *) "xxxx*zzy*fffff"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedBegin = 11;
+      expectedEnd = 27;
+      expectedMatch = 14;
+      expectedTarget = 26;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "¯\\(ツ)/¯xxxx*zzzzzzzzy*f", (uint8_t *) "xxx*zzy*f", 
+         CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯xxxx*zzzzzzzzy*f"), 
+         CodePointCountUtf8((uint8_t *) "xxx*zzy*f"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedBegin = 11;
+      expectedEnd = 27;
+      expectedMatch = 14;
+      expectedTarget = 26;
+      bAllPassed &= testwildfindslice(
+          (uint8_t * ) "¯\\(ツ)/¯xxxx*zzzzzzzzy*f♖l℻ Я", (uint8_t *) "xxx*zzy*f♖l",
+          CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯xxxx*zzzzzzzzy*f"),
+          CodePointCountUtf8((uint8_t *) "xxx*zzy*f"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "¯\\(ツ)/¯xxxxzzzzzzzzyf", (uint8_t *) "xxxx*zzy*fffff", 
+         CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯xxxxzzzzzzzzyf"), 
+         CodePointCountUtf8((uint8_t *) "xxxx*zzy*fffff"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedBegin = 11;
+      expectedEnd = 25;
+      expectedMatch = 15;
+      expectedTarget = 24;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "¯\\(ツ)/¯xxxxzzzzzzzzyf", (uint8_t *) "xxxx*zzy*f", 
+         CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯xxxxzzzzzzzzyf"), 
+         CodePointCountUtf8((uint8_t *) "xxxx*zzy*f"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedBegin = 11;
+      expectedEnd = 22;
+      expectedMatch = 13;
+      expectedTarget = 19;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "¯\\(ツ)/¯xyxyxyzyxyz", (uint8_t *) "xy*z*xyz", 
+         CodePointCountUtf8((uint8_t *) "¯\\(ツ)/¯xyxyxyzyxyz"), 
+         CodePointCountUtf8((uint8_t *) "xy*z*xyz"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedBegin = 0;
+      expectedEnd = 11;
+      expectedMatch = 0;
+      expectedTarget = 9;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "mississippi", (uint8_t *) "*sip*", 
+         CodePointCountUtf8((uint8_t *) "mississippi"), 
+         CodePointCountUtf8((uint8_t *) "*sip*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedMatch = 2;
+      expectedEnd = 9;
+      expectedTarget = 6;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "xyxyxyxyz", (uint8_t *) "xy*xyz", 
+         CodePointCountUtf8((uint8_t *) "xyxyxyxyz"), 
+         CodePointCountUtf8((uint8_t *) "xy*xyz"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 11;
+      expectedTarget = 9;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "mississippi", (uint8_t *) "mi*sip*", 
+         CodePointCountUtf8((uint8_t *) "mississippi"), 
+         CodePointCountUtf8((uint8_t *) "mi*sip*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      // Set of cases exercising all paths through CodePointBacktrackUtf8().
+      expectedEnd = 6;
+      expectedMatch = 0;
+      expectedTarget = 6;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ababac", (uint8_t *) "*abac*", 
+         CodePointCountUtf8((uint8_t *) "ababac"), 
+         CodePointCountUtf8((uint8_t *) "*abac*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = 14;
+      expectedTarget = 10;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🐐ababac🐐", (uint8_t *) "*abac*", 
+         iRelyNull, iRelyNull,
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "😀ababac😀", (uint8_t *) "*abac*", 
+         CodePointCountUtf8((uint8_t *) "😀ababac😀"), 
+         CodePointCountUtf8((uint8_t *) "*abac*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = 12;
+      expectedTarget = 9;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ꩳababacꩳ", (uint8_t *) "*abac*", 
+         CodePointCountUtf8((uint8_t *) "ꩳababacꩳ"), 
+         CodePointCountUtf8((uint8_t *) "*abac*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = 10;
+      expectedTarget = 8;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ߘababacߘ", (uint8_t *) "*abac*", 
+          iRelyNull, iRelyNull,
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = 12;
+      expectedTarget = 9;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "♓ababac♓", (uint8_t *) "*abac*", 
+         CodePointCountUtf8((uint8_t *) "♓ababac♓"), 
+         CodePointCountUtf8((uint8_t *) "*abac*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = 5;
+      expectedMatch = 1;
+      expectedTarget = 5;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aaazz", (uint8_t *) "a*zz*", 
+         CodePointCountUtf8((uint8_t *) "aaazz"), 
+         CodePointCountUtf8((uint8_t *) "a*zz*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a12b12", (uint8_t *) "*12*23", 
+         CodePointCountUtf8((uint8_t *) "a12b12"), 
+         CodePointCountUtf8((uint8_t *) "*12*23"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = 4;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a12b12", (uint8_t *) "a12b", 
+         CodePointCountUtf8((uint8_t *) "a12b12"), 
+         CodePointCountUtf8((uint8_t *) "a12b"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 6;
+      expectedMatch = 0;
+      expectedTarget = 6;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a12b12", (uint8_t *) "*12*12*", 
+         CodePointCountUtf8((uint8_t *) "a12b12"), 
+         CodePointCountUtf8((uint8_t *) "*12*12*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 2);
+
+      if (!g_bComparePerformance)
+      {
+         // From DDJ reader Andy Belf: a case of repeating text matching 
+         // the different kinds of wildcards in order of '*' and then '?'.
+         expectedBegin = 0;
+	     expectedEnd = 5;
+         expectedMatch = 0;
+         expectedTarget = 2;
+         bAllPassed &= testwildfindslice(
+           (uint8_t *) "caaab", (uint8_t *) "*a?b", 
+             CodePointCountUtf8((uint8_t *) "caaab"), 
+             CodePointCountUtf8((uint8_t *) "*a?b"), 
+             expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+             /* iTarget = */ 0);
+
+         // This similar case was found, probably independently, by Dogan 
+         // Kurt.
+	     expectedEnd = 3;
+         expectedTarget = 0;
+         bAllPassed &= testwildfindslice(
+           (uint8_t *) "aaaaa", (uint8_t *) "*aa?", 
+             CodePointCountUtf8((uint8_t *) "aaaaa"), 
+             CodePointCountUtf8((uint8_t *) "*aa?"), 
+             expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+             /* iTarget = */ 0);
+      }
+
+      // Additional cases where the '*' char appears in the tame string.
+      expectedBegin = 0;
+      expectedEnd = 4;
+      expectedMatch = 1;
+      expectedTarget = 3;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a*abab", (uint8_t *) "a*b", 
+         CodePointCountUtf8((uint8_t *) "a*abab"), 
+         CodePointCountUtf8((uint8_t *) "a*b"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 5;
+      expectedMatch = 1;
+      expectedTarget = 3;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ar*ar", (uint8_t *) "a*ar", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a*ar", (uint8_t *) "a*aar", 
+         CodePointCountUtf8((uint8_t *) "a*ar"), 
+         CodePointCountUtf8((uint8_t *) "a*aar"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // More double wildcard scenarios.
+      expectedBegin = 0;
+      expectedEnd = 11;
+      expectedMatch = 2;
+      expectedTarget = 8;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "XYXYXYZYXYz", (uint8_t *) "XY*Z*XYz", 
+         CodePointCountUtf8((uint8_t *) "XYXYXYZYXYz"), 
+         CodePointCountUtf8((uint8_t *) "XY*Z*XYz"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedBegin = 0;
+      expectedEnd = 11;
+      expectedMatch = 0;
+      expectedTarget = 9;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "missisSIPpi", (uint8_t *) "*SIP*", 
+         CodePointCountUtf8((uint8_t *) "missisSIPpi"), 
+         CodePointCountUtf8((uint8_t *) "*SIP*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "mississipPI", (uint8_t *) "*issip*PI", 
+         CodePointCountUtf8((uint8_t *) "mississipPI"), 
+         CodePointCountUtf8((uint8_t *) "*issip*PI"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = 9;
+      expectedMatch = 2;
+      expectedTarget = 6;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "xyxyxyxyz", (uint8_t *) "xy*xyz", 
+         CodePointCountUtf8((uint8_t *) "xyxyxyxyz"), 
+         CodePointCountUtf8((uint8_t *) "xy*xyz"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 11;
+      expectedMatch = 2;
+      expectedTarget = 9;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "miSsissippi", (uint8_t *) "mi*sip*", 
+         CodePointCountUtf8((uint8_t *) "miSsissippi"), 
+         CodePointCountUtf8((uint8_t *) "mi*sip*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      if (!bCase)
+      {
+         expectedBegin = expectedEnd = expectedTarget = 0;
+         expectedMatch = g_noMatch;
+      }
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "miSsissippi", (uint8_t *) "mi*Sip*", 
+         CodePointCountUtf8((uint8_t *) "miSsissippi"), 
+         CodePointCountUtf8((uint8_t *) "mi*Sip*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = 6;
+      expectedMatch = 0;
+      expectedTarget = 6;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abAbac", (uint8_t *) "*Abac*", 
+         CodePointCountUtf8((uint8_t *) "abAbac"), 
+         CodePointCountUtf8((uint8_t *) "*Abac*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      if (!bCase)
+      {
+         expectedBegin = expectedEnd = expectedTarget = 0;
+         expectedMatch = g_noMatch;
+      }
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abAbaC", (uint8_t *) "*Abac*", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = 5;
+      expectedMatch = 1;
+      expectedTarget = 5;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aAazz", (uint8_t *) "a*zz*", 
+         5 + CodePointCountUtf8((uint8_t *) "aAazz"), 
+         5 + CodePointCountUtf8((uint8_t *) "a*zz*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "A12b12", (uint8_t *) "*12*23", 
+         5 + CodePointCountUtf8((uint8_t *) "A12b12"), 
+         5 + CodePointCountUtf8((uint8_t *) "*12*23"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedEnd = 6;
+      expectedMatch = 0;
+      expectedTarget = 6;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a12B12", (uint8_t *) "*12*12*", 
+         5 + CodePointCountUtf8((uint8_t *) "a12B12"), 
+         5 + CodePointCountUtf8((uint8_t *) "*12*12*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 2);
+
+      expectedEnd = 3;
+      expectedTarget = 3;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "oWn", (uint8_t *) "*oWn*", 
+         5 + CodePointCountUtf8((uint8_t *) "oWn"), 
+         5 + CodePointCountUtf8((uint8_t *) "*oWn*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      // Completely tame (no wildcards) cases.
+      expectedBegin = 0;
+      expectedEnd = 3;
+      expectedMatch = g_noMatch;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "bLah", (uint8_t *) "bLah", 
+         CodePointCountUtf8((uint8_t *) "bLah") - 1, 
+         CodePointCountUtf8((uint8_t *) "bLah") - 1, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      if (bCase)
+      {
+         expectedEnd = 4;
+      }
+      else
+      {
+         expectedEnd = expectedTarget = 0;
+      }
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "bLah", (uint8_t *) "bLaH", 
+         CodePointCountUtf8((uint8_t *) "bLah"), 
+         CodePointCountUtf8((uint8_t *) "bLaH"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Simple mixed matching wildcards test suggested by Marlin Deckert.
+      expectedBegin = 0;
+      expectedEnd = 1;
+      expectedMatch = 0;
+      expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a", (uint8_t *) "*?", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 2;
+      expectedTarget = 1;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ab", (uint8_t *) "*?", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 3;
+      expectedTarget = 2;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abc", (uint8_t *) "*?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // More mixed wildcard tests including coverage for false positives.
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a", (uint8_t *) "??", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 2;
+      expectedMatch = 1;
+      expectedTarget = 1;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ab", (uint8_t *) "?*?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 2;
+      expectedMatch = 0;
+      expectedTarget = 2;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ab", (uint8_t *) "*?*?*", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 2);
+
+      expectedEnd = 3;
+      expectedMatch = 1;
+      expectedTarget = 2;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abc", (uint8_t *) "?**?*?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 2);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abc", (uint8_t *) "?**?*&?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 2);
+
+      expectedBegin = 0;
+      expectedEnd = 4;
+      expectedMatch = 2;
+      expectedTarget = 2;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abcd", (uint8_t *) "?b*??", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abcd", (uint8_t *) "?a*??", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 4;
+      expectedMatch = 1;
+      expectedTarget = 1;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abcd", (uint8_t *) "?**?c?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abcd", (uint8_t *) "?**?d?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      expectedBegin = 0;
+      expectedEnd = 5;
+      expectedMatch = 1;
+      expectedTarget = 4;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abcde", (uint8_t *) "?*b*?*d*?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 3);
+
+      // Single-character cases for verification against false positives.
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLah", (uint8_t *) "bL?h", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLaaa", (uint8_t *) "bLa?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLah", (uint8_t *) "bLa?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+ 
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLaH", (uint8_t *) "?Lah", 
+         CodePointCountUtf8((uint8_t *) "🎶☕️bLaH"), 
+         CodePointCountUtf8((uint8_t *) "?Lah"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLaH", (uint8_t *) "?LaH",
+         CodePointCountUtf8((uint8_t *) "🎶☕️bLaH"), 
+         CodePointCountUtf8((uint8_t *) "?LaH"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLah", (uint8_t *) "*bL?h7*", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLaaa", (uint8_t *) "b*La7*?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLah", (uint8_t *) "b*L*a7?", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+ 
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLaH", (uint8_t *) "?La*7*h", 
+         CodePointCountUtf8((uint8_t *) "🎶☕️bLaH"), 
+         CodePointCountUtf8((uint8_t *) "?Lah"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLaH", (uint8_t *) "?La*7H*",
+         CodePointCountUtf8((uint8_t *) "🎶☕️bLaH"), 
+         CodePointCountUtf8((uint8_t *) "?LaH"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 1);
+
+      // Many-wildcard scenarios.
+      expectedBegin = 0;
+      expectedEnd = 91;
+      expectedMatch = 1;
+      expectedTarget = 90;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab", 
+         (uint8_t *) "a*a*a*a*a*a*aa*aaa*a*a*b", 
+         CodePointCountUtf8((uint8_t *) "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"), 
+         CodePointCountUtf8((uint8_t *) "a*a*a*a*a*a*aa*aaa*a*a*b"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 9);
+
+      expectedEnd = 110;
+      expectedMatch = 0;
+      expectedTarget = 110;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab", 
+         (uint8_t *)  "*a*b*ba*ca*a*aa*aaa*fa*ga*b*", 
+         CodePointCountUtf8((uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab"), 
+         CodePointCountUtf8((uint8_t *) "*a*b*ba*ca*a*aa*aaa*fa*ga*b*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 10);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab", 
+         (uint8_t *) "*a*b*ba*ca*a*x*aaa*fa*ga*b*", 
+         CodePointCountUtf8((uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab"), 
+         CodePointCountUtf8((uint8_t *) "*a*b*ba*ca*a*x*aaa*fa*ga*b*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 10);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab", 
+         (uint8_t *) "*a*b*ba*ca*aaaa*fa*ga*gggg*b*", 
+         CodePointCountUtf8((uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab"), 
+         CodePointCountUtf8((uint8_t *) "*a*b*ba*ca*aaaa*fa*ga*gggg*b*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 9);
+
+      expectedBegin = 0;
+      expectedEnd = 110;
+      expectedMatch = 0;
+      expectedTarget = 110;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab", 
+         (uint8_t *) "*a*b*ba*ca*aaaa*fa*ga*ggg*b*", 
+         CodePointCountUtf8((uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab"), 
+         CodePointCountUtf8((uint8_t *) "*a*b*ba*ca*aaaa*fa*ga*ggg*b*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 9);
+
+      expectedEnd = 12;
+      expectedMatch = 0;
+      expectedTarget = 10;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aaabbaabbaab", (uint8_t *) "*aabbaa*a*",
+         CodePointCountUtf8((uint8_t *) "aaabbaabbaab"), 
+         CodePointCountUtf8((uint8_t *) "*aabbaa*a*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 2);
+
+      expectedBegin = 1;
+      expectedEnd = 37;
+      expectedMatch = 2;
+      expectedTarget = 35;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ba*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*ba*b", 
+         (uint8_t *) "a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*",
+         CodePointCountUtf8((uint8_t *) "ba*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*ba*b"), 
+         CodePointCountUtf8((uint8_t *) "a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 16);
+
+      expectedBegin = 0;
+      expectedEnd = 18;
+      expectedMatch = 0;
+      expectedTarget = 18;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "baaaaaaaaaaaaaaaaa", 
+         (uint8_t *) "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*",
+         CodePointCountUtf8((uint8_t *) "baaaaaaaaaaaaaaaaa"), 
+         CodePointCountUtf8((uint8_t *) "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 15);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "baaaaaaaaaaaaaaaa", 
+         (uint8_t *) "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*", 
+         CodePointCountUtf8((uint8_t *) "baaaaaaaaaaaaaaaa"), 
+         CodePointCountUtf8((uint8_t *) "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 15);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*a\
+bcdefghij*abcdefghijk*abcdefghijkl*abcdefghijklm*abcdefghijklmn", 
+         (uint8_t *) "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*", 
+         CodePointCountUtf8((uint8_t *) "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*a\
+bcdefghij*abcdefghijk*abcdefghijkl*abcdefghijklm*abcdefghijklmn"), 
+         CodePointCountUtf8((uint8_t *) "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 16);
+
+      expectedBegin = 0;
+      expectedEnd = 113;
+      expectedMatch = 3;
+      expectedTarget = 102;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*a\
+bcdefghij*abcdefghijk*abcdefghijkl*abcdefghijklm*abcdefghijklmn", 
+         (uint8_t *) "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*",
+         CodePointCountUtf8((uint8_t *) "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*a\
+bcdefghij*abcdefghijk*abcdefghijkl*abcdefghijklm*abcdefghijklmn"), 
+         CodePointCountUtf8((uint8_t *) "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 11);
+
+      expectedEnd = 21;
+      expectedTarget = 18;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abc*abcd*abcd*abc*abcd", 
+         (uint8_t *) "abc*abc*abc*abc*abc", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 3);
+
+      expectedEnd = 49;
+      expectedTarget = 45;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abc*abcd*abcd*abc*abcd*abcd*abc*abcd*abc*abc*abcd", 
+         (uint8_t *) "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abcd",
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 9);
+
+      expectedEnd = 3;
+      expectedMatch = 0;
+      expectedTarget = 3;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abc", (uint8_t *) "********a********b********c********",
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 30);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "********a********b********c********", (uint8_t *) "abc", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 30);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abc", (uint8_t *) "********a********b********b********", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 30);
+
+      expectedBegin = 0;
+      expectedEnd = 5;
+      expectedMatch = 0;
+      expectedTarget = 4;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "*abc*", (uint8_t *) "***a*b*c***", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 7);
+
+      // Matching wildcards tests suggested by other DDJ readers
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "?", 
+         CodePointCountUtf8((uint8_t *) ""), 
+         CodePointCountUtf8((uint8_t *) "?"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 0;
+      expectedMatch = 0;
+      expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "*?", 
+         CodePointCountUtf8((uint8_t *) ""), 
+         CodePointCountUtf8((uint8_t *) "*?"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "", 
+         CodePointCountUtf8((uint8_t *) ""), 
+         CodePointCountUtf8((uint8_t *) ""), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = 0;
+      expectedTarget = g_noMatch;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a", (uint8_t *) "", 
+         CodePointCountUtf8((uint8_t *) "a"), 
+         CodePointCountUtf8((uint8_t *) ""), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      bCase = true;
+   }
+
+   if (bAllPassed)
+   {
+      printf("Passed slice search tests with ASCII strings\n");
+   }
+   else
+   {
+      printf("Failed slice search tests with ASCII strings\n");
+   }
+
+   return bAllPassed;
+}
+
+// A set of slice search tests with (almost) no '*' wildcards.
+// Some simple tests with single '*' wildcards are included.
+//
+bool testset_slicesearch_tame(void)
+{
+   const bool bCase = false;  // Perform only case-sensitive tests.
+   const int iRelyNull = 0;   // Rely on null string terminators.
+   size_t expectedBegin, expectedEnd, expectedMatch, expectedTarget;
+
+   int  nReps;
+   bool bAllPassed = true;
+
+   if (g_bComparePerformance)
+   {
+      // Can choose as many repetitions as you might expect in production.
+      nReps = g_iTestRepetitions;
+   }
+   else
+   {
+      nReps = 1;
+   }
+
+   while (nReps--)
+   {
+      // Case with matching ASCII characters but no wildcards.
+      expectedBegin = 4;
+      expectedEnd = 7;
+      expectedMatch = g_noMatch;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🥦abc", (uint8_t *) "abc", iRelyNull, iRelyNull,
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Case with last character mismatch.
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🥦abc", (uint8_t *) "abd", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Cases with repeating character sequences.
+      expectedBegin = 4;
+      expectedEnd = 10;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🥦abcccd", (uint8_t *) "abcccd", iRelyNull, iRelyNull,  
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 12;
+      expectedEnd = 27;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🌟🤖🪐mississipisippi", (uint8_t *) "mississipisippi", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 11;
+      expectedEnd = 25;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "💫🤪⚡xxxxzzzzzzzzyf", (uint8_t *) "xxxxzzzzzzzzyf",
+          iRelyNull, iRelyNull,
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "💫🤪⚡xxxxzzzzzzzzyf", (uint8_t *) "xxxxzzzzzzzzyff", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+ 
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🥦xxxxzzzzzzzzyf", (uint8_t *) "xxxxzzy.fffff", 
+         CodePointCountUtf8((uint8_t *) "🥦xxxxzzzzzzzzyf"), 
+         CodePointCountUtf8((uint8_t *) "xxxxzzy.fffff"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 12;
+      expectedEnd = 23;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🌟🤖🪐xyxyxyzyxyz", (uint8_t *) "xyxyxyzyxyz", 
+         CodePointCountUtf8((uint8_t *) "🌟🤖🪐xyxyxyzyxyz"), 
+         CodePointCountUtf8((uint8_t *) "xyxyxyzyxyz"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 11;
+      expectedEnd = 22;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "💫🤪⚡mississippi", (uint8_t *) "mississippi", 
+         CodePointCountUtf8((uint8_t *) "💫🤪⚡mississippi"), 
+         CodePointCountUtf8((uint8_t *) "mississippi"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 11;
+      expectedEnd = 20;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "💫🤪⚡xyxyxyxyz", (uint8_t *) "xyxyxyxyz", 
+         CodePointCountUtf8((uint8_t *) "💫🤪⚡xyxyxyxyz"), 
+         CodePointCountUtf8((uint8_t *) "xyxyxyxyz"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 11;
+      expectedEnd = 23;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "💫🤪⚡m ississippi", (uint8_t *) "m ississippi", 
+         CodePointCountUtf8((uint8_t *) "💫🤪⚡m ississippi"), 
+         CodePointCountUtf8((uint8_t *) "m ississippi"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "✨ababac", (uint8_t *) "ababac?", 
+         CodePointCountUtf8((uint8_t *) "✨ababac"), 
+         CodePointCountUtf8((uint8_t *) "ababac?"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 4;
+      expectedEnd = 10;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "✨dababac", (uint8_t *) "ababac", 
+         CodePointCountUtf8((uint8_t *) "✨dababac"), 
+         CodePointCountUtf8((uint8_t *) "ababac"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 3;
+      expectedEnd = 8;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "✨aaazz", (uint8_t *) "aaazz", 
+         CodePointCountUtf8((uint8_t *) "✨aaazz"), 
+         CodePointCountUtf8((uint8_t *) "aaazz"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a12b12", (uint8_t *) "1212", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "★🪐★a12b12", (uint8_t *) "*a12c", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // A few single-wildcard scenarios
+      expectedBegin = 0;
+      expectedEnd = 17;
+      expectedMatch = 0;
+      expectedTarget = 13;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ℵ★🪐✷a12b12", (uint8_t *) "*a12b", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 3;
+      expectedMatch = 6;
+      expectedTarget = 13;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "ℵ★🪐✷a12b12", (uint8_t *) "★*a12b", iRelyNull, iRelyNull,
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 13;
+      expectedEnd = 19;
+      expectedMatch = 17;
+      expectedTarget = 19;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "ℵ★🪐✷a12b12", (uint8_t *) "a12b*", iRelyNull, iRelyNull,
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 4;
+      expectedMatch = 4;
+      expectedTarget = 4;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "a12b", (uint8_t *) "a12b*", iRelyNull, iRelyNull,
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // A mix of tame testcases
+      expectedBegin = 0;
+      expectedEnd = 1;
+      expectedMatch = g_noMatch;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "n", (uint8_t *) "n", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 5;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aabab", (uint8_t *) "aabab", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 2;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ar🐁", (uint8_t *) "ar", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aar", (uint8_t *) "aaar", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 6;
+      expectedEnd = 17;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ΛΘΛmissisSIPpi", (uint8_t *) "missisSIPpi", 
+         CodePointCountUtf8((uint8_t *) "ΛΘΛmissisSIPpi"), 
+         CodePointCountUtf8((uint8_t *) "missisSIPpi"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ѦѮѦmississipPI", (uint8_t *) "mississipPI", 
+         CodePointCountUtf8((uint8_t *) "ѦѮѦmississipPI"), 
+         CodePointCountUtf8((uint8_t *) "mississipPI"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 15;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ѦѮѦxyxyxyxyz", (uint8_t *) "xyxyxyxyz", 
+         CodePointCountUtf8((uint8_t *) "ѦѮѦxyxyxyxyz"), 
+         CodePointCountUtf8((uint8_t *) "xyxyxyxyz"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 17;
+      expectedEnd = 28;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ᛟᚠᛒᚢ ᛋ miSsissippi", (uint8_t *) "miSsissippi", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "miSsissippi", (uint8_t *) "miSsisSippi", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 6;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abAbac🦉", (uint8_t *) "abAbac", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abAbac", (uint8_t *) "abAbac", 
+         CodePointCountUtf8((uint8_t *) "abAbac"), 
+         CodePointCountUtf8((uint8_t *) "abAbac"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 6;
+      expectedEnd = 11;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "Ꙅ⚡aAazz🐺", (uint8_t *) "aAazz", 
+         CodePointCountUtf8((uint8_t *) "Ꙅ⚡aAazz🐺"), 
+         CodePointCountUtf8((uint8_t *) "aAazz"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "≈≈A12b12", (uint8_t *) "A12b123", 
+         CodePointCountUtf8((uint8_t *) "≈≈A12b12"), 
+         CodePointCountUtf8((uint8_t *) "A12b123"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 4;
+      expectedEnd = 10;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ՐՒa12B12", (uint8_t *) "a12B12", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 7;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ՐՒoWn🐾", (uint8_t *) "oWn", 
+         CodePointCountUtf8((uint8_t *) "ՐՒoWn🐾"), 
+         CodePointCountUtf8((uint8_t *) "oWn"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 8;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ՐՒbLah🦆", (uint8_t *) "bLah", 
+         CodePointCountUtf8((uint8_t *) "ՐՒbLah🦆"), 
+         CodePointCountUtf8((uint8_t *) "bLah"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ՐՒbLah🐇", (uint8_t *) "bLaH", 
+         CodePointCountUtf8((uint8_t *) "ՐՒbLah🐇"), 
+         CodePointCountUtf8((uint8_t *) "bLaH"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Single ASCII character.
+      expectedBegin = 0;
+      expectedEnd = 1;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a", (uint8_t *) "a", 
+         CodePointCountUtf8((uint8_t *) "a"), 
+         CodePointCountUtf8((uint8_t *) "a"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Single '*' and single '?' cases.
+      expectedBegin = 0;
+      expectedEnd = 15;
+      expectedMatch = 0;
+      expectedTarget = 6;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "ꏁ⅟☈‱✪⅖", (uint8_t *) "*☈?✪", iRelyNull, iRelyNull,
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 18;
+      expectedMatch = 3;
+      expectedTarget = 9;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "⅜ꏁ⅟☈‱✪⅖", (uint8_t *) "⅜*☈?✪", iRelyNull, iRelyNull,
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 3;
+      expectedEnd = 17;
+      expectedMatch = 6;
+      expectedTarget = 13;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "ℵ★🪐✷a12b12", (uint8_t *) "★*a12b", iRelyNull, iRelyNull,
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 10;
+      expectedMatch = 0;
+      expectedTarget = 3;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "䷸★⅋b⟸", (uint8_t *) "*★?b",
+          CodePointCountUtf8((uint8_t *) "䷸★⅋b⟸"),
+          CodePointCountUtf8((uint8_t *) "*★?b"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Single '*' and multiple '?' cases.
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "䷸◡̈ab⟸", (uint8_t *) "*◡̈??b", 
+         CodePointCountUtf8((uint8_t *) "䷸◡̈ab⟸"), 
+         CodePointCountUtf8((uint8_t *) "*◡̈??b"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 30;
+      expectedMatch = 0;
+      expectedTarget = 12;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "ᕒ⌘⚠䷸⯂ᔣ🌏🐰⯏b⟸", (uint8_t *) "*⯂???⯏b",
+          iRelyNull, iRelyNull, 
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 3;
+      expectedEnd = 30;
+      expectedMatch = 6;
+      expectedTarget = 12;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "ᕒ⌘⚠䷸⯂ᔣ🌏🐰⯏b⟸", (uint8_t *) "⌘*⯂???⯏b",
+          CodePointCountUtf8((uint8_t *) "ᕒ⌘⚠䷸⯂ᔣ🌏🐰⯏b⟸"),
+          CodePointCountUtf8((uint8_t *) "⌘*⯂???⯏b"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 3;
+      expectedMatch = 0;
+      expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "abc", (uint8_t *) "*???",
+          CodePointCountUtf8((uint8_t *) "abc"),
+          CodePointCountUtf8((uint8_t *) "*???"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 8;
+      expectedMatch = 1;
+      expectedTarget = 4;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "abcdabcd", (uint8_t *) "a*a??d", iRelyNull, iRelyNull,
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Longer all-tame scenarios.
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⚔️aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab", 
+         (uint8_t *) "ヅaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab", 
+         iRelyNull, iRelyNull, expectedBegin, expectedEnd, expectedMatch, 
+         expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 8;
+      expectedEnd = 118;
+      expectedMatch = g_noMatch;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "◡ᵕ̈abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab", 
+         (uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab", 
+         iRelyNull, iRelyNull, expectedBegin, expectedEnd, expectedMatch, 
+         expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab", 
+         (uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajaxalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab", 
+         iRelyNull, iRelyNull, expectedBegin, expectedEnd, expectedMatch, 
+         expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 110;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab", 
+         (uint8_t *) "abababababababababababababababababababaacacacacaca\
+cacadaeafagahaiajakalaaaaaaaaaaaaaaaaaffafagaagggagaaaaaaaab", 
+         iRelyNull, iRelyNull, expectedBegin, expectedEnd, expectedMatch, 
+         expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedEnd = 12;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aaabbaabbaab", (uint8_t *) "aaabbaabbaab", 
+         CodePointCountUtf8((uint8_t *) "aaabbaabbaab"), 
+         CodePointCountUtf8((uint8_t *) "aaabbaabbaab"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 8;
+      expectedEnd = 42;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "◡ᵕ̈aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 
+         (uint8_t *) "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 
+         CodePointCountUtf8((uint8_t *) "◡ᵕ̈aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), 
+         CodePointCountUtf8((uint8_t *) "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 17;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aaaaaaaaaaaaaaaaa", 
+         (uint8_t *) "aaaaaaaaaaaaaaaaa", 
+         CodePointCountUtf8((uint8_t *) "aaaaaaaaaaaaaaaaa"), 
+         CodePointCountUtf8((uint8_t *) "aaaaaaaaaaaaaaaaa"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aaaaaaaaaaaaaaaa", 
+         (uint8_t *) "aaaaaaaaaaaaaaaaa", 
+         CodePointCountUtf8((uint8_t *) "aaaaaaaaaaaaaaaa"), 
+         CodePointCountUtf8((uint8_t *) "aaaaaaaaaaaaaaaaa"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abcabcdabcdeabcdefabcdefgabcdefghabcdefghia\
+bcdefghijabcdefghijkabcdefghijklabcdefghijklmabcdefghijklmn", 
+         (uint8_t *) "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc", 
+         CodePointCountUtf8((uint8_t *) "abcabcdabcdeabcdefabcdefgabcdefghabcdefghia\
+bcdefghijabcdefghijkabcdefghijklabcdefghijklmabcdefghijklmn"), 
+         CodePointCountUtf8((uint8_t *) "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 102;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abcabcdabcdeabcdefabcdefgabcdefghabcdefghia\
+bcdefghijabcdefghijkabcdefghijklabcdefghijklmabcdefghijklmn", 
+         (uint8_t *) "abcabcdabcdeabcdefabcdefgabcdefghabcdefghia\
+bcdefghijabcdefghijkabcdefghijklabcdefghijklmabcdefghijklmn", 
+         iRelyNull, iRelyNull, expectedBegin, expectedEnd, expectedMatch, 
+         expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🪐🪐🪐abcabcdabcdabcabcd", (uint8_t *) "abcabcdabcabcabc", 
+         iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      expectedBegin = 15;
+      expectedEnd = 31;
+      expectedTarget = g_noMatch;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "🪐🪐🪐abcabcabcdabcabcabcd", (uint8_t *) "abcabcdabcabcabc",
+          iRelyNull, iRelyNull,
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+   }
+
+   if (bAllPassed)
+   {
+        printf("Passed slice search tests with tame ASCII strings\n");
+   }
+   else
+   {
+        printf("Failed slice search tests with tame ASCII strings\n");
+   }
+
+   return bAllPassed;
+}
+
+// A set of slice search tests with empty input.
+//
+bool testset_slicesearch_empty(void)
+{
+   const bool bCase = false;  // Perform only case-sensitive tests.
+   const int iRelyNull = 0;   // Rely on null string terminators.
+   size_t expectedBegin, expectedEnd, expectedMatch, expectedTarget;
+
+   int  nReps;
+   bool bAllPassed = true;
+
+   if (g_bComparePerformance)
+   {
+      // Can choose as many repetitions as you might expect in production.
+      nReps = g_iTestRepetitions;
+   }
+   else
+   {
+      nReps = 1;
+   }
+
+   while (nReps--)
+   {
+      // A simple case.
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "abd", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "abd"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Cases with repeating character sequences.
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "abcccd", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "abcccd"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "mississipisippi", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "mississipisippi"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "xxxxzzzzzzzzyfffff", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "xxxxzzzzzzzzyfffff"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "xxxxzzzzzzzzyf", 
+           iRelyNull, 15, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "7", 
+           iRelyNull, 2, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "6", 
+           iRelyNull, 6, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "128", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "abd"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "mississippi", 
+           iRelyNull, 42, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "xyxyxyxyz", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "xyxyxyxyz"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "",(uint8_t *)  "m ississippi", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "m ississippi"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "ababac*", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "ababac*"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "ababac", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "ababac"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "aaazz", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "aaazz"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "1212", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "1212"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "a12b12", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "a12b12"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // A mix of testcases.
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "n", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "n"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "aabab", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "aabab"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "ar", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "ar"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "aaar", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "ar"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "XYXYXYZYXYz", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "XYXYXYZYXYz"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "missisSIPpi", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "missisSIPpi"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "mississipPI", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "mississipPI"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "xyxyxyxyz", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "xyxyxyxyz"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "miSsissippi", 
+           iRelyNull, 1 + CodePointCountUtf8((uint8_t *) "miSsissippi"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "miSsisSippi", 
+           iRelyNull, 12, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "abAbac", 
+           iRelyNull, 7, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "abAbac", 
+           iRelyNull, 7, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "aAazz", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "aAazz"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "A12b123", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "A12b123"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "",(uint8_t *)  "a12B12", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "a12B12"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "oWn", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "oWn"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "bLah", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "bLah"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "bLaH", 
+           iRelyNull, CodePointCountUtf8((uint8_t *) "bLaH"), 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Both strings empty.
+      expectedBegin = 0;
+      expectedEnd = 0;
+      expectedMatch = 0;
+      expectedTarget = 0;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "", (uint8_t *) "", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Another simple case
+      expectedBegin = expectedEnd = 0;
+      expectedTarget = g_noMatch;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abc", (uint8_t *) "", iRelyNull, iRelyNull, 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+         /* iTarget = */ 0);
+
+      // Cases with repeating character sequences.
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abcccd", (uint8_t *) "", iRelyNull, iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "mississipisippi", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "mississipisippi"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "xxxxzzzzzzzzyf", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "xxxxzzzzzzzzyf"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "xxxxzzzzzzzzyf", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "xxxxzzzzzzzzyf"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "xxxxzzzzzzzzyf", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "xxxxzzzzzzzzyf"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "xxxxzzzzzzzzyf", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "xxxxzzzzzzzzyf"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "xyxyxyzyxyz", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "xyxyxyzyxyz"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "mississippi", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "mississippi"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "xyxyxyxyz", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "xyxyxyxyz"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "m ississippi", (uint8_t *)  "", 
+           CodePointCountUtf8((uint8_t *) "m ississippi"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ababac", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "ababac"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "dababac",(uint8_t *)  "", 
+           iRelyNull, iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aaazz",(uint8_t *)  "", 
+           6, iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a12b12", (uint8_t *) "", 
+           8, iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a12b12",(uint8_t *)  "", 
+           128, iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a12b12", (uint8_t *) "", 
+           1, iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+
+      // A mix of testcases.
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "n", (uint8_t *) "", 
+           1 + CodePointCountUtf8((uint8_t *) "n"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aabab", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "aabab"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "ar", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "ar"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aar", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "aar"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "XYXYXYZYXYz",(uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "XYXYXYZYXYz"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "missisSIPpi", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "missisSIPpi"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "mississipPI", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "mississipPI"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "xyxyxyxyz", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "xyxyxyxyz"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "miSsissippi", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "miSsissippi"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "miSsissippi", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "miSsissippi"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abAbac", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "abAbac") - 3, iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "abAbac", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "abAbac") - 2, iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "aAazz", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "aAazz") - 1, iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "A12b12", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "A12b12"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "a12B12", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "a12B12"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "oWn", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "oWn"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "bLah",(uint8_t *)  "", 
+           CodePointCountUtf8((uint8_t *) "bLah"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "bLah", (uint8_t *) "", 
+           CodePointCountUtf8((uint8_t *) "bLah"), iRelyNull, 
+           expectedBegin, expectedEnd, expectedMatch, expectedTarget, bCase, 
+           /* iTarget = */ 0);
+   }
+
+   if (bAllPassed)
+   {
+        printf("Passed slice search tests with empty input\n");
+   }
+   else
+   {
+        printf("Failed slice search tests with empty input\n");
+   }
+
+   return bAllPassed;
+}
+
+// Correctness tests for case-sensitive and case-insensitive UTF-8-enabled 
+// routines for slice search.
+//
+bool testset_slicesearch_global(void)
+{
+   int len = 0;               // Rely on null string terminators.
+   bool bAllPassed = true;
+   size_t expectedBegin, expectedEnd, expectedMatch, expectedTarget;
+
+   do
+   {
+      // Simple correctness test with mixed content.
+      expectedBegin = 0;
+      expectedEnd = 80;
+      expectedMatch = 0;
+      expectedTarget = 73;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🐂🚀♥🍀貔貅🦁★□√🚦€¥☯🐴😊🍓🐕🎺🧊☀☂🐉", (uint8_t *) "*☂🐉", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐂🚀♥🍀貔貅🦁★□√🚦€¥☯🐴😊🍓🐕🎺🧊☀☂🐉"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*☂🐉"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      // Tests with symbolic content.
+      expectedEnd = 7;
+      expectedTarget = 3;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "≥AbCD", (uint8_t *) "*abc?", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "≥AbCD"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*abc?"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = 3;
+      expectedEnd = 12;
+      expectedMatch = 6;
+      expectedTarget = 6;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "≥≫AbC★", (uint8_t *) "≫*abc?", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "≥≫AbC★"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "≫*abc?"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "≳⚛⚖☁o", (uint8_t *) "⚛⚖☁O", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "≳⚛⚖☁o"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "⚛⚖☁O"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      expectedBegin = 6;
+      expectedEnd = 24;
+      expectedMatch = 10;
+      expectedTarget = 14;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃⊃🌻🌻⚛⚖☁o", (uint8_t *) "🌻*⚛⚖☁O", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃⊃🌻🌻⚛⚖☁o"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "🌻*⚛⚖☁O"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 110;
+      expectedMatch = 0;
+      expectedTarget = 10;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃🌻...𐐀𐑌𐑊𐐪𐑉𐐽 𐐏𐐬𐑉 𐑅𐐬𐑊𐑆 𐐻𐐬𐐶𐐨𐑉𐐼 𐐊𐑄𐐲𐑉𐑆", 
+         (uint8_t *) "*🌻*𐐨𐑌𐑊𐐪𐑉𐐽 𐐷𐐬𐑉 𐑅𐐬𐑊𐑆 𐐻𐐬𐐶𐐨𐑉𐐼 𐐲𐑄𐐲𐑉𐑆",
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃🌻...𐐀𐑌𐑊𐐪𐑉𐐽 𐐏𐐬𐑉 𐑅𐐬𐑊𐑆 𐐻𐐬𐐶𐐨𐑉𐐼 𐐊𐑄𐐲𐑉𐑆"),
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*🌻*𐐨𐑌𐑊𐐪𐑉𐐽 𐐷𐐬𐑉 𐑅𐐬𐑊𐑆 𐐻𐐬𐐶𐐨𐑉𐐼 𐐲𐑄𐐲𐑉𐑆"),
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "≳🌻...𐐀𐑌𐑊𐐪𐑉𐐽 𐐏𐐬𐑉 𐑅𐐬𐑊𐑆 𐐻𐐬𐐶𐐨𐑉𐐼 𐐊𐑄𐐲𐑉𐑆", 
+         (uint8_t *) "*🌻*𐐨𐑌𐑊𐐪𐑉𐐽 𐐷𐐬𐑉 𐑅𐐬𐑊𐑆 𐐻𐐬𐐶𐐨r𐐼 𐐲𐑄𐐲𐑉𐑆", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "≳🌻...𐐀𐑌𐑊𐐪𐑉𐐽 𐐏𐐬𐑉 𐑅𐐬𐑊𐑆 𐐻𐐬𐐶𐐨𐑉𐐼 𐐊𐑄𐐲𐑉𐑆"),
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*🌻*𐐨𐑌𐑊𐐪𐑉𐐽 𐐷𐐬𐑉 𐑅𐐬𐑊𐑆 𐐻𐐬𐐶𐐨r𐐼 𐐲𐑄𐐲𐑉𐑆"),
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = 8;
+      expectedEnd = 62;
+      expectedMatch = 12;
+      expectedTarget = 12;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "≫🌻 𞤢 𞤣 𞤤 𞤥 𞤦 𞤧 𞤰 𞤨 𞤩 𞤪 𞤫", 
+         (uint8_t *) "𞤀* 𞤁 𞤂 𞤃 𞤄 𞤅 𞤎 𞤆 𞤇 𞤈 𞤉", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "𞤀𞤤𞤳𞤵𞤤𞤫 𞤁𞤢𞤲𞤣𞤢𞤴𞤯𞤫 𞤂𞤫𞤻𞤮𞤤 𞤃𞤵𞤤𞤵𞤺𞤮𞤤"),
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "𞤀𞤂𞤖𞤵𞤤𞤫 𞤁𞤀𞤲𞤣𞤀𞤴𞤯𞤫 𞤂𞤫𞤻𞤮𞤤 𞤃𞤵𞤤𞤵𞤺𞤮𞤤"),
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "≥𞤀𞤤𞤳𞤵𞤤𞤫 𞤁𞤢𞤲𞤣𞤢𞤴𞤯𞤫 𞤂𞤫𞤻𞤮𞤤 𞤃𞤵𞤤𞤵𞤸𞤮𞤤", 
+         (uint8_t *) "𞤀𞤂𞤖𞤵𞤤𞤫* 𞤁𞤀𞤲𞤣𞤀𞤴𞤯𞤫 𞤂𞤫𞤻𞤮𞤤 𞤃𞤵𞤤𞤵𞤺𞤮𞤤", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "𞤀𞤤𞤳𞤵𞤤𞤫 𞤁𞤢𞤲𞤣𞤢𞤴𞤯𞤫 𞤂𞤫𞤻𞤮𞤤 𞤃𞤵𞤤𞤵𞤺𞤮𞤤"),
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "𞤀𞤂𞤖𞤵𞤤𞤫* 𞤁𞤀𞤲𞤣𞤀𞤴𞤯𞤫 𞤂𞤫𞤻𞤮𞤤 𞤃𞤵𞤤𞤵𞤺𞤮𞤤"),
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 22;
+      expectedMatch = 0;
+      expectedTarget = 20;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🌻ississip🌻🌻pi", (uint8_t *) "*issip*PI",
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🌻ississip🌻🌻pi"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*issip*PI"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+        /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = 4;
+      expectedEnd = 23;
+      expectedMatch = 6;
+      expectedTarget = 13;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🌻miSsissip🌻🌻pi", (uint8_t *) "mi*Sip*", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🌻miSsissip🌻🌻pi"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "mi*Sip*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = 0;
+      expectedEnd = 14;
+      expectedMatch = 0;
+      expectedTarget = 13;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️bLah", (uint8_t *) "*bLa*H", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🎶☕️bLah"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*bLaH"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️🢇miSsissippi", (uint8_t *) "🐧⚓*🢇miSsisSip*pi", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🎶☕️🢇miSsissippi"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐧⚓*🢇miSsisSippi"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = 4;
+      expectedEnd = 22;
+      expectedMatch = 7;
+      expectedTarget = 20;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "🐧⚓🢇miSsissippi", (uint8_t *) "⚓*🢇miSsisSip*pi",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⚓*🢇miSsisSip*pi"),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐧⚓*🢇miSsisSippi"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🎶☕️abAßac", (uint8_t *) "🐧⚓*abAß*c", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🎶☕️abAßac"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐧⚓*abAßac"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = 0;
+      expectedEnd = 14;
+      expectedMatch = 7;
+      expectedTarget = 7;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🐧⚓abAßaC", (uint8_t *) "🐧⚓*abAß?c",
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐧⚓abAßac"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐧⚓*abAßac"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "❆❆bL௵🌚ah", (uint8_t *) "🐧⚓*bL௵🌚aH", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "❆❆bL௵🌚ah"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐧⚓*bL௵🌚aH"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "❆❆b௵🌚Lah", (uint8_t *) "*🐧⚓*bL௵🌚aH", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "❆❆bL௵🌚ah"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*🐧⚓*bL௵🌚aH"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "❆❆b௵🌚Lah", (uint8_t *) "🐧⚓*bL௵🌚aH", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "❆❆bL௵🌚ah"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*🐧⚓*bL௵🌚aH"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 17;
+      expectedMatch = 0;
+      expectedTarget = 6;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "❆❆b௵🌚Lah", (uint8_t *) "*b?🌚?aH", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "❆❆b௵🌚Lah"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*b?🌚?aH"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "❆❆b௵🌚Lah", (uint8_t *) "*b?🌚?aH", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "❆❆b௵🌚Lah"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*b?🌚?aH"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 17;
+      expectedMatch = 0;
+      expectedTarget = 16;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "❆❆b௵🌚Lah", (uint8_t *) "*b?🌚?*h", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "❆❆b௵🌚Lah"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*b?🌚?*h"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 1);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "❆❆▲●🐎✗🤣🐶♫🌻ॐ", (uint8_t *) "*▲●☂*", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "❆❆▲●🐎✗🤣🐶♫🌻ॐ"),
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*▲●☂*"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = 0;
+      expectedEnd = 15;
+      expectedMatch = 0;
+      expectedTarget = 3;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃𓋍𓋔𓎍", (uint8_t *) "*𓋍𓋔?", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃𓋍𓋔𓎍"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*𓋍𓋔?"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃𓋍𓋔𓎍", (uint8_t *) "*𓋍?𓋔𓎍", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃𓋍𓋔𓎍"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*𓋍?𓋔𓎍"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 12;
+      expectedMatch = 0;
+      expectedTarget = 3;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃♅☌♇", (uint8_t *) "*♅☌♇", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃♅☌♇"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*♅☌♇"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      expectedTarget = 9;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃⚛⚖☁", (uint8_t *) "*⚛*☁", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃⚛⚖☁"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*⚛*☁"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 1);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃⚛⚖☁O", (uint8_t *) "*⚛*0", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃⚛⚖☁O"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*⚛*0"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 1);
+     
+      // Tests with internationalized content.
+      expectedBegin = 0;
+      expectedEnd = 98;
+      expectedMatch = 0;
+      expectedTarget = 3;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃गते गते पारगते पारसंगते बोधि स्वाहा", 
+         (uint8_t *) "*गते गते पारगते प????गते बोधि स्वाहा", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃गते गते पारगते पारसंगते बोधि स्वाहा"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*गते गते पारगते प????गते बोधि स्वाहा"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃गते गते पारगते पारसंगते बोधि स्वाहा", 
+         (uint8_t *) "*गते गते पारगते प????गते बोधि स्वाहा", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃गते गते पारगते पारसंगते बोधि स्वाहा"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*गते गते पारगते प????गते बोधि स्वाहा"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🐍Мне нужно выучить русский язык, чтобы лучше оценить Пушкина.", 
+         (uint8_t *) "мне нужно выучить * язык, чтобы лучше оценить *.", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐍Мне нужно выучить русский язык, чтобы лучше оценить Пушкина."), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "мне нужно выучить * язык, чтобы лучше оценить *."), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 1);
+
+      expectedBegin = 4;
+      expectedEnd = 114;
+      expectedMatch = 37;
+      expectedTarget = 98;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🐍Мне нужно выучить русский язык, чтобы лучше оценить Пушкина.", 
+         (uint8_t *) "мне нужно выучить * язык, чтобы * ???????.", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐍Мне нужно выучить русский язык, чтобы лучше оценить Пушкина."), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "мне нужно выучить * язык, чтобы * ???????."), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedTarget = 113;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🐍Мне нужно выучить русский язык, чтобы лучше оценить Пушкина.", 
+         (uint8_t *) "мне нужно выучить * язык, чтобы лучше оценить *.", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐍Мне нужно выучить русский язык, чтобы лучше оценить Пушкина."), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "Мне нужно выучить * язык, чтобы лучше оценить *."), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = 0;
+      expectedEnd = 26;
+      expectedMatch = 0;
+      expectedTarget = 25;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "Able was I ere I saw Elba.",
+          (uint8_t *) "*??? was I * I saw *.",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "Able was I ere I saw Elba."),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*??? was I * I saw *."),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ false, /* iTarget = */ 2);
+
+      expectedBegin = 0;
+      expectedEnd = 114;
+      expectedMatch = 0;
+      expectedTarget = 113;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "🐍Мне нужно выучить русский язык, чтобы лучше оценить Пушкина.", 
+         (uint8_t *) "*??? нужно выучить * язык, чтобы *.", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐍Мне нужно выучить русский язык, чтобы лучше оценить Пушкина."), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*??? нужно выучить * язык, чтобы *."), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 2);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "🐍Мне нужно выучить русский язык, чтобы лучше оценить Пушкина.",
+          (uint8_t *) "??? нужно выучить * язык, чтобы *.",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "🐍Мне нужно выучить русский язык, чтобы лучше оценить Пушкина."),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "??? нужно выучить * язык, чтобы *."),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ false, /* iTarget = */ 1);
+
+      expectedBegin = 0;
+      expectedEnd = 75;
+      expectedMatch = 0;
+      expectedTarget = 60;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "😍😍😍 abcde (F)ghiJnn (A)bc defg hijkl ab cdef ghijkl M Nopqrs tlhfd",
+          (uint8_t *) "*????? * (A)bc defg hijkl ab cdef * M ?????? tlhfd",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍😍😍 abcde (F)ghiJnn (A)bc defg hijkl ab cdef ghijkl M Nopqrs tlhfd"),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*????? * (A)bc defg hijkl ab cdef * M ?????? tlhfd"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ false, /* iTarget = */ 2);
+
+      expectedEnd = 171;
+      expectedTarget = 132;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "😍😍😍 ᛋᚭᚷᚹᛗ (ᛗ)ᛟᚷᛗᛖᚿᛃ (ᚦ)ᚭᛞ ᚺᛟᚭᛦ ᛃᚷᛟᛚᛞ ᚷᚭ ᛟᚭᛦᛃ ᚷᛟᛚᛞᛃᚿ ᛞ ᚷᛟᚭᚿᚭᛦ ᚺᛟᛋᛚᛃ", 
+         (uint8_t *) "*????? * (ᚦ)ᚭᛞ ᚺᛟᚭᛦ ᛃᚷᛟᛚᛞ ᚷᚭ ᛟᚭᛦᛃ * ᛞ ?????? ᚺᛟᛋᛚᛃ", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍😍😍 ᛋᚭᚷᚹᛗ (ᛗ)ᛟᚷᛗᛖᚿᛃ (ᚦ)ᚭᛞ ᚺᛟᚭᛦ ᛃᚷᛟᛚᛞ ᚷᚭ ᛟᚭᛦᛃ ᚷᛟᛚᛞᛃᚿ ᛞ ᚷᛟᚭᚿᚭᛦ ᚺᛟᛋᛚᛃ"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*????? * (ᚦ)ᚭᛞ ᚺᛟᚭᛦ ᛃᚷᛟᛚᛞ ᚷᚭ ᛟᚭᛦᛃ * ᛞ ?????? ᚺᛟᛋᛚᛃ"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 2);
+
+      expectedBegin = 1;
+      expectedEnd = 29;
+      expectedMatch = 4;
+      expectedTarget = 7;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "B B a B rstln e slaA slaA Klf",
+          (uint8_t *) " ? * ????? ? ???? ???? ???",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "B B a B rstln e slaA slaA Klf"),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) " ? * ????? ? ???? ???? ???"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ false, /* iTarget = */ 0);
+
+      expectedBegin = 4;
+      expectedEnd = 92;
+      expectedMatch = 10;
+      expectedTarget = 19;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻",
+          (uint8_t *) " ? * ????? ? ???? ???? ???",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻"),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) " ? * ????? ? ???? ???? ???"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ false, /* iTarget = */ 0);
+
+      expectedBegin = 13;
+      expectedEnd = 171;
+      expectedMatch = 29;
+      expectedTarget = 132;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "😍😍😍 ᛋᚭᚷᚹᛗ (ᛗ)ᛟᚷᛗᛖᚿᛃ (ᚦ)ᚭᛞ ᚺᛟᚭᛦ ᛃᚷᛟᛚᛞ ᚷᚭ ᛟᚭᛦᛃ ᚷᛟᛚᛞᛃᚿ ᛞ ᚷᛟᚭᚿᚭᛦ ᚺᛟᛋᛚᛃ",
+          (uint8_t *) "ᛋᚭᚷᚹᛗ * (ᚦ)ᚭᛞ ᚺᛟᚭᛦ ᛃᚷᛟᛚᛞ ᚷᚭ ᛟᚭᛦᛃ * ᛞ ?????? ᚺᛟᛋᛚᛃ",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍😍😍 ᛋᚭᚷᚹᛗ (ᛗ)ᛟᚷᛗᛖᚿᛃ (ᚦ)ᚭᛞ ᚺᛟᚭᛦ ᛃᚷᛟᛚᛞ ᚷᚭ ᛟᚭᛦᛃ ᚷᛟᛚᛞᛃᚿ ᛞ ᚷᛟᚭᚿᚭᛦ ᚺᛟᛋᛚᛃ"),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "ᛋᚭᚷᚹᛗ * (ᚦ)ᚭᛞ ᚺᛟᚭᛦ ᛃᚷᛟᛚᛞ ᚷᚭ ᛟᚭᛦᛃ * ᛞ ?????? ᚺᛟᛋᛚᛃ"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ false, /* iTarget = */ 1);
+
+      expectedBegin = 20;
+      expectedEnd = 92;
+      expectedMatch = 24;
+      expectedTarget = 36;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻", 
+         (uint8_t *) "𐓨*𐒷 ? ???? ???? ???", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "𐓨*𐒷 ? ???? ???? ???"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      // An all-tame scenario.
+      expectedBegin = 20;
+      expectedEnd = 79;
+      expectedTarget = g_noMatch;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻",
+          (uint8_t *) "𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻"),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = 5;
+      expectedEnd = 92;
+      expectedMatch = 24;
+      expectedTarget = 36;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻",
+          (uint8_t *) "😍 ? 😍 𐓨*𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 ???",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻"),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍 ? 😍 𐓨*𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 ???"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = 20;
+      expectedEnd = 36;
+      expectedMatch = 24;
+      expectedTarget = 32;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻",
+          (uint8_t *) "𐓨*𐒷",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻"),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "𐓨*𐒷"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 40;
+      expectedMatch = 0;
+      expectedTarget = 19;
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻",
+          (uint8_t *) "* 𐓨𐓤𐒰𐓟𐒷",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻"),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "* 𐓨𐓤𐒰𐓟𐒷"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ true, /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+          (uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻",
+          (uint8_t *) "* 𐓨𐓤??𐒷",
+          /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "😍 😍 𐒷 😍 𐓨𐓤𐒰𐓟𐒷 𐒷 𐓆𐒰𐓟𐒷 𐓆𐒰𐓟𐒷 𐒼𐒰𐒻"),
+          /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "* 𐓨𐓤𐒰𐓟𐒷"),
+          expectedBegin, expectedEnd, expectedMatch, expectedTarget,
+          /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃אני צריך ללמוד אנגלית כדי להעריך את גינסברג", 
+         (uint8_t *) " אני צריך ללמוד אנגלית כדי להעריך את ???????", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃אני צריך ללמוד אנגלית כדי להעריך את גינסברג"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) " אני צריך ללמוד אנגלית כדי להעריך את ???????"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃אני צריך ללמוד אנגלית כדי להעריך את גינסברג", 
+         (uint8_t *) " אני צריך ללמוד אנגלית כדי להעריך את ???????", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃אני צריך ללמוד אנגלית כדי להעריך את גינסברג"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) " אני צריך ללמוד אנגלית כדי להעריך את ???????"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 177;
+      expectedMatch = 0;
+      expectedTarget = 144;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે.", 
+         (uint8_t *) "* શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે * શીખવું પડશે.", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે."), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "* શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે * શીખવું પડશે."), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 1);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે.", 
+         (uint8_t *) "* શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે * શીખવું પડશે.", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે."), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "* શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે * શીખવું પડશે."), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે.", 
+         (uint8_t *) "*??????????? શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે * શીખવું પડશે.", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે."), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*??????????? શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે * શીખવું પડશે."), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 1);
+
+      expectedBegin = 36;
+      expectedMatch = 59;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે.", 
+         (uint8_t *) " શ્રેષ્ઠ * કરવા માટે મારે * શીખવું પડશે.", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે."), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) " શ્રેષ્ઠ * કરવા માટે મારે * શીખવું પડશે."), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 1);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે.", 
+         (uint8_t *) "ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે હિબ્રુ ભાષા શીખવી પડશે.", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે."), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે હિબ્રુ ભાષા શીખવી પડશે."), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે.", 
+         (uint8_t *) "ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે હિબ્રુ ભાષા શીખવી પડશે.", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે અંગ્રેજી શીખવું પડશે."), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "ગિન્સબર્ગની શ્રેષ્ઠ પ્રશંસા કરવા માટે મારે હિબ્રુ ભાષા શીખવી પડશે."), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+   
+      // These tests involve multiple-byte code points that contain bits 
+      // identical to those found in the single-byte code points for '*' 
+      // and '?'.
+      expectedBegin = 3;
+      expectedEnd = 17;
+      expectedMatch = 6;
+      expectedTarget = 8;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ḪؿꜪἪꜿ", 
+         (uint8_t *) "Ḫ*ꜪἪꜿ", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ḪؿꜪἪꜿ"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "Ḫ*ꜪἪꜿ"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      expectedBegin = expectedEnd = expectedTarget = 0;
+      expectedMatch = g_noMatch;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ḪؿUἪꜿ", 
+         (uint8_t *) "Ḫ*ꜪἪꜿ", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "ḪؿUἪꜿ"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "Ḫ*ꜪἪꜿ"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ḪؿUἪꜿ", 
+         (uint8_t *) "ḪؿꜪἪꜿ", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ḪؿUἪꜿ"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "ḪؿꜪἪꜿ"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ḪؿꜪἪꜿ", 
+         (uint8_t *) "Ḫ*Ꜫ*Ж", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ḪؿꜪἪꜿ"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "Ḫ*Ꜫ*Ж"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 1);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ḪؿꜪἪꜿ", 
+         (uint8_t *) "ḪؿꜪἪꜿЖ", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ḪؿꜪἪꜿ"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "ḪؿꜪἪꜿЖ"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ḪؿꜪἪꜿ", 
+         (uint8_t *) "ЬḪؿꜪἪꜿ", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ḪؿꜪἪꜿ"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "ЬḪؿꜪἪꜿ"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ḪؿꜪἪꜿ", 
+         (uint8_t *) "ЬḪؿꜪἪꜿ", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ḪؿꜪἪꜿ"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "ЬḪؿꜪἪꜿ"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 0);
+
+      expectedBegin = 0;
+      expectedEnd = 17;
+      expectedMatch = 0;
+      expectedTarget = 14;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ḪؿꜪἪꜿ", 
+         (uint8_t *) "*?ؿꜪ*ꜿ", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ḪؿꜪἪꜿ"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*?ؿꜪ*ꜿ"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ false, /* iTarget = */ 1);
+
+      expectedBegin = 3;
+      expectedMatch = 11;
+      bAllPassed &= testwildfindslice(
+         (uint8_t *) "⊃ḪؿꜪἪꜿ", 
+         (uint8_t *) "Ḫ?Ꜫ*ꜿ", 
+         /* lenTame = */ !len ? len : CodePointCountUtf8((uint8_t *) "⊃ḪؿꜪἪꜿ"), 
+         /* lenWild = */ !len ? len : CodePointCountUtf8((uint8_t *) "*?ؿꜪ*ꜿ"), 
+         expectedBegin, expectedEnd, expectedMatch, expectedTarget, 
+         /* bCase = */ true, /* iTarget = */ 0);
+   } while (!len++);
+
+   if (bAllPassed)
+   {
+      printf("Passed slice search tests with UTF-8 content\n");
+   }
+   else
+   {
+      printf("Failed slice search tests with UTF-8 content\n");
+   }
+   
+   return bAllPassed;
+}
+
 // Tests for UTF-8 tokenset search functions.
 //
 bool testset_findtoken(void)
 {
    size_t expectedToken;
-   int len = 0;               // Rely on null string terminators.
+   int len = 0;             // Rely on null string terminators, for first pass.
    bool bAllPassed = true;
 
    do
@@ -8899,7 +11792,7 @@ void ClearAccumulatedTimes(void)
          g_uModeA_AccumulatedTimeLenUtf8 = g_uModeB_AccumulatedTimeLenUtf8 = 0;
 
    // Clear function call counts too.
-   g_iModeA_CallsUtf8vAscii = g_iModeB_CallsUtf8vAscii = 
+   g_iModeA_CallsUtf8 = g_iModeB_CallsUtf8 = 
      g_iModeA_CallsLenUtf8vLenAscii = g_iModeB_CallsLenUtf8vLenAscii = 0;
 
    return;
@@ -9000,7 +11893,7 @@ bool foldcopyandduplicate_testswithrollup(void)
       // Show the timing results.
       printf(
           "\nTiming results for CopyUtf8() v strcpy() (%d calls)\n", 
-            g_iModeA_CallsUtf8vAscii);
+            g_iModeA_CallsUtf8);
       printf(
          "strcpy() - for ASCII strings: %.3f seconds\n",
               fAsciiCopyTimeInSeconds);
@@ -9010,7 +11903,7 @@ bool foldcopyandduplicate_testswithrollup(void)
 
       printf(
           "\nTiming results for DuplicateUtf8() v strdup() (%d calls)\n", 
-            g_iModeB_CallsUtf8vAscii);
+            g_iModeB_CallsUtf8);
       printf(
          "strdup() - for ASCII strings: %.3f seconds\n",
               fAsciiDuplicateTimeInSeconds);
@@ -9123,7 +12016,7 @@ bool separateconcatenateandslice_testswithrollup(void)
       // Show the timing results.
       printf(
           "\nTiming results for SeparateUtf8() + TrimUtf8() v SeparateAscii() + TrimAscii() (%d calls)\n", 
-            g_iModeA_CallsUtf8vAscii);
+            g_iModeA_CallsUtf8);
       printf(
          "SeparateAscii() + TrimAscii() - for ASCII strings: %.3f seconds\n",
               fAsciiSeparateTimeInSeconds);
@@ -9133,7 +12026,7 @@ bool separateconcatenateandslice_testswithrollup(void)
 
       printf(
           "\nTiming results for ConcatenateUtf8() v strcat() (%d calls)\n", 
-            g_iModeB_CallsUtf8vAscii);
+            g_iModeB_CallsUtf8);
       printf(
          "strcat() - for ASCII strings: %.3f seconds\n",
               fAsciiConcatenateTimeInSeconds);
@@ -9229,7 +12122,7 @@ bool compare_testswithrollup(void)
       // Show the timing results.
       printf(
           "\nTiming results for CompareUtf8() v strcmp() (%d calls)\n", 
-            g_iModeA_CallsUtf8vAscii);
+            g_iModeA_CallsUtf8);
       printf(
         "strcmp() - for ASCII strings: %.3f seconds\n",
               fAsciiTimeInSeconds);
@@ -9239,7 +12132,7 @@ bool compare_testswithrollup(void)
 
       printf(
           "\nTiming results for CaseCompareUtf8() v strcasecmp() (%d calls)\n", 
-            g_iModeB_CallsUtf8vAscii);
+            g_iModeB_CallsUtf8);
       printf(
          "strcasecmp() - for ASCII strings: %.3f seconds\n",
               fAsciiCaseTimeInSeconds);         
@@ -9345,7 +12238,7 @@ bool slicecompare_testswithrollup(void)
       // Show the timing results.
       printf(
           "\nTiming results for FindUtf8() v strstr() (%d calls)\n", 
-            g_iModeA_CallsUtf8vAscii);
+            g_iModeA_CallsUtf8);
       printf(
          "strstr() - for ASCII strings: %.3f seconds\n",
               fAsciiTimeInSeconds);
@@ -9355,7 +12248,7 @@ bool slicecompare_testswithrollup(void)
 
       printf(
           "\nTiming results for CaseFindUtf8() v strcasestr() (%d calls)\n", 
-            g_iModeB_CallsUtf8vAscii);
+            g_iModeB_CallsUtf8);
       printf(
           "strcasestr() - for ASCII strings: %.3f seconds\n",
               fAsciiCaseTimeInSeconds);         
@@ -9442,15 +12335,15 @@ bool wildcompare_testswithrollup(void)
       // Show the timing results.
       printf(
           "\nTiming results for Wild*CompareUtf8() v FastWildCompare() (%d calls)\n", 
-            g_iModeA_CallsUtf8vAscii);
+            g_iModeA_CallsUtf8);
       printf(
           "FastWildCompare() - for ASCII strings: %.3f seconds\n",
               fAsciiVersionTimeInSeconds);
       printf(
-          "Wild[Case]CompareUtf8() - for UTF-8-encoded strings: %.3f seconds\n",
+          "Wild[Case]CompareUtf8() - for UTF-8-encoded content: %.3f seconds\n",
               fUtf8VersionTimeInSeconds);
       printf(
-          "WildLen[Case]CompareUtf8() - for UTF-8-encoded strings: %.3f seconds\n",
+          "WildLen[Case]CompareUtf8() - for UTF-8-encoded content: %.3f seconds\n\n",
               fUtf8LenVersionTimeInSeconds);
    }
 
@@ -9486,7 +12379,7 @@ bool targetedsearch_testswithrollup(void)
    // UTF-8 tests for matching wildcards, including targeted terms.
    bAllPassed &= testset_targetedsearch_global();
 
-   if (g_uModeA_AccumulatedTimeAscii)
+   if (g_uModeA_AccumulatedTimeUtf8)
    {
       // Timings have been accumulated via file-scope data.
       const double fBase = 10.0;
@@ -9494,9 +12387,6 @@ bool targetedsearch_testswithrollup(void)
       const double fExpMilliseconds = 3.0;
 
       // Represent the timings in seconds, to millisecond precision.
-      double fTimeCumulativeAsciiVersion = 
-            ((double) (g_uModeA_AccumulatedTimeAscii) /
-                pow(fBase, fExpNanoseconds)) * pow(fBase, fExpMilliseconds);
       double fTimeCumulativeUtf8Version = 
             ((double) (g_uModeA_AccumulatedTimeUtf8) /
                 pow(fBase, fExpNanoseconds)) * pow(fBase, fExpMilliseconds);
@@ -9510,14 +12400,79 @@ bool targetedsearch_testswithrollup(void)
 
       // Show the timing results.
       printf(
-          "\nTiming results for Wild*FindUtf8() (%d calls)\n", 
-            g_iModeA_CallsUtf8vAscii);
+          "\nTiming results for FastUtf8::Wild[Case]FindUtf8() (%d calls)\n", 
+            g_iModeA_CallsUtf8);
       printf(
-          "Wild[Case]FindUtf8() - for UTF-8-encoded strings: %.3f seconds\n",
+          "FastUtf8::Wild[Case]FindUtf8() - for UTF-8-encoded content: %.3f seconds\n",
               fUtf8VersionTimeInSeconds);
       printf(
-          "WildLen[Case]FindUtf8() - for UTF-8-encoded strings: %.3f seconds\n",
+          "FastUtf8::WildLen[Case]FindUtf8() - for UTF-8-encoded content: %.3f seconds\n\n",
               fUtf8LenVersionTimeInSeconds);
+   }
+
+   return bAllPassed;
+}
+
+// Tests for UTF-8 slice search / vectorized wildcard search functions.
+//
+bool slicesearch_testswithrollup(void)
+{
+   bool bAllPassed = true;
+
+   if (g_bComparePerformance)
+   {
+      ClearAccumulatedTimes();
+      g_bAccumulateFunctionTimes = true;
+   }
+
+   // Tests for all-tame or single-wildcard scenarios.
+   bAllPassed &= testset_slicesearch_tame();
+
+   // ASCII-only tests for empty-content scenarios.
+   bAllPassed &= testset_slicesearch_empty();
+
+   // ASCII-only tests for matching wildcards, including targeted terms.
+   bAllPassed &= testset_slicesearch_latin();
+
+   if (g_bComparePerformance)
+   {
+      g_bAccumulateFunctionTimes = false;
+   }
+
+   // UTF-8 tests for matching wildcards, including targeted terms.
+   bAllPassed &= testset_slicesearch_global();
+
+   if (g_uModeA_AccumulatedTimeUtf8)
+   {
+      // Timings have been accumulated via file-scope data.
+      const double fBase = 10.0;
+      const double fExpNanoseconds = 9.0;
+      const double fExpMilliseconds = 3.0;
+
+      // Represent the timings in seconds, to millisecond precision.
+      double fTimeCumulativeSliced = 
+            ((double) (g_uModeA_AccumulatedTimeUtf8) /
+                pow(fBase, fExpNanoseconds)) * pow(fBase, fExpMilliseconds);
+      double fTimeCumulativeVectorized = 
+            ((double) (g_uModeB_AccumulatedTimeUtf8) /
+                pow(fBase, fExpNanoseconds)) * pow(fBase, fExpMilliseconds);
+
+      float fSlicedTimeInSeconds = (float) (fTimeCumulativeSliced / 1000);
+      float fVectorizedTimeInSeconds = (float) (fTimeCumulativeVectorized / 1000);
+
+      // Show the timing results.
+      printf(
+          "\nTiming results for FastUtf8::Wild[Case]FindSliceUtf8() (%d calls)\n", 
+            g_iModeA_CallsUtf8);
+      printf(
+          "Wild[Case]FindSliceUtf8() - for UTF-8-encoded content: %.3f seconds\n",
+              fSlicedTimeInSeconds);
+      printf(
+          "\nTiming results for FastUtf8::Wild[Case]Vectorize() (%d calls)\n", 
+            g_iModeB_CallsUtf8);
+      printf(
+          "FastUtf8::Wild[Case]VectorizeUtf8() - for UTF-8-encoded content: %.3f seconds\n\n",
+              fVectorizedTimeInSeconds);
    }
 
    return bAllPassed;
@@ -9601,6 +12556,9 @@ int main(int argc, char **argv)
 
    // Tests for UTF-8 targeted wildcard search functions.
    bAllPassed &= targetedsearch_testswithrollup();
+
+   // Tests for UTF-8 slice search and vectorized wildcard search functions.
+   bAllPassed &= slicesearch_testswithrollup();
 
    // Tests for UTF-8 tokenset search functions.
    bAllPassed &= tokensetsearch_testswithrollup();
