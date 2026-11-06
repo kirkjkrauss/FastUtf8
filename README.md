@@ -86,6 +86,18 @@ A set of <a href="https://developforperformance.com/UniseriesGuide.html#wildCase
 A family of <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesMethodsForTargetedWildcardSearch">pFindWild()</a> and <a href="https://developforperformance.com/UniseriesGuide.html#CasepFindWildMethods">casepFindWild()</a> methods for <a href="https://developforperformance.com/FastUtf8.html#TargetedWildcardSearch">targeted wildcard search</a>;
 <br><br>
 
+
+<b>Slice-within-slice techniques</b> (C++ only)
+
+A set of <a href="https://developforperformance.com/UniseriesGuide.html#pFindSliceMethodsForRawBufferContent">pFindSlice()</a> and <a href="https://developforperformance.com/UniseriesGuide.html#casepFindSliceMethodsForRawBufferContent">casepFindSlice()</a> methods for finding a slice within a (<a href="https://developforperformance.com/VectorizedWildcardSearch.html#ParameterizedConstructors">prospectively much</a>) larger slice;
+
+A set of <a href="https://developforperformance.com/UniseriesGuide.html#pFindWildSliceMethodsForRawBufferContent">pFindWildSlice()</a> and <a href="https://developforperformance.com/UniseriesGuide.html#casepFindWildSliceMethodsForRawBufferContent">casepFindWildSlice()</a> methods for pattern matching to find a slice within a slice;
+
+A set of <a href="https://developforperformance.com/UniseriesGuide.html#pVectorizeWildMethodsForRawBufferContent">pVectorizeWild()</a> and <a href="https://developforperformance.com/UniseriesGuide.html#casepVectorizeWildMethodsForRawBufferContent">casepVectorizeWild()</a> methods for finding matches on multiple wildcards;
+
+A set of <a href="https://developforperformance.com/UniseriesGuide.html#pSelectWildMethodsForRawBufferContent">pSelectWild()</a> and <a href="https://developforperformance.com/UniseriesGuide.html#casepSelectWildMethodsForRawBufferContent">casepSelectWild()</a> methods for <a href="https://developforperformance.com/WildSelect.html">querying</a> hierarchical semistructured content;
+<br><br>
+
 <b>Other features</b>
 
 <a href="https://developforperformance.com/UniseriesGuide.html#UniseriesSubscriptOperators">Subscript operators</a> with terrible performance;
