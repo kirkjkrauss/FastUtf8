@@ -1,0 +1,132 @@
+{
+  "generation": {
+    "lost": {
+      "entry": [
+        {
+          "surname": "Crane",
+          "dob": "7-21-1899",
+          "city": "Garrettsville",
+          "state": "OH"
+        },
+        {
+          "surname": "Cummings",
+          "dob": "10-14-1894",
+          "city": "Cambridge",
+          "state": "MA"
+        },
+        {
+          "surname": "Eliot",
+          "dob": "9-26-1888",
+          "city": "St. Louis",
+          "state": "MO"
+        },
+        {
+          "surname": "Moore",
+          "dob": "11-15-1887",
+          "city": "Kirkwood",
+          "state": "MO"
+        },
+        {
+          "surname": "Nearing",
+          "dob": "1-22-1890",
+          "city": "Morris Run",
+          "state": "PA"
+        },
+        {
+          "surname": "Pound",
+          "dob": "10-39-1885",
+          "city": "Hailey",
+          "state": "ID"
+        },
+        {
+          "surname": "Thurber",
+          "dob": "12-8-1894",
+          "city": "Columbus",
+          "state": "OH"
+        },
+        {
+          "surname": "White",
+          "dob": "7-11-1899",
+          "city": "Mount Vernon",
+          "state": "NY"
+        }
+      ]
+    },
+    "silent": {
+      "entry": [
+        {
+          "surname": "Ashbery",
+          "dob": "7-28-1927",
+          "city": "Rochester",
+          "state": "NY"
+        },
+        {
+          "surname": "Bremser",
+          "dob": "5-22-1934",
+          "city": "Jersey City",
+          "state": "NJ"
+        },
+        {
+          "surname": "Corso",
+          "dob": "3-26-1930",
+          "city": "Cicero",
+          "state": "IL"
+        },
+        {
+          "surname": "Dylan",
+          "dob": "5-24-1941",
+          "city": "Duluth",
+          "state": "MN"
+        },
+        {
+          "surname": "Eigner",
+          "dob": "7-7-1927",
+          "city": "Swampscott",
+          "state": "MA"
+        },
+        {
+          "surname": "Field",
+          "dob": "6-7-1924",
+          "city": "Yonkers",
+          "state": "NY"
+        },
+        {
+          "surname": "Ginsberg",
+          "dob": "6-3-1926",
+          "city": "Newark",
+          "state": "NJ"
+        },
+        {
+          "surname": "Hadley",
+          "dob": "5-27-1938",
+          "city": "St. Louis",
+          "state": "MO"
+        },
+        {
+          "surname": "Jones",
+          "dob": "10-27-1934",
+          "city": "Newark",
+          "state": "NJ"
+        },
+        {
+          "surname": "Kerouac",
+          "dob": "3-12-1922",
+          "city": "Lowell",
+          "state": "MA"
+        },
+        {
+          "surname": "Lamantia",
+          "dob": "10-23-1927",
+          "city": "San Francisco",
+          "state": "CA"
+        },
+        {
+          "surname": "McClure",
+          "dob": "10-20-1932",
+          "city": "Marysville",
+          "state": "KS"
+        }
+      ]
+    }
+  }
+}

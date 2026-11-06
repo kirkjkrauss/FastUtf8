@@ -1,0 +1,27 @@
+<?xml version=1.0?>
+<generation>
+<lost>
+<entry><surname>Crane</surname><dob>7-21-1899</dob><city>Garrettsville</city><state>OH</state></entry>
+<entry><surname>Cummings</surname><dob>10-14-1894</dob><city>Cambridge</city><state>MA</state></entry>
+<entry><surname>Eliot</surname><dob>9-26-1888</dob><city>St. Louis</city><state>MO</state></entry>
+<entry><surname>Moore</surname><dob>11-15-1887</dob><city>Kirkwood</city><state>MO</state></entry>
+<entry><surname>Nearing</surname><dob>1-22-1890</dob><city>Morris Run</city><state>PA</state></entry>
+<entry><surname>Pound</surname><dob>10-39-1885</dob><city>Hailey</city><state>ID</state></entry>
+<entry><surname>Thurber</surname><dob>12-8-1894</dob><city>Columbus</city><state>OH</state></entry>
+<entry><surname>White</surname><dob>7-11-1899</dob><city>Mount Vernon</city><state>NY</state></entry>
+</lost>
+<silent>
+<entry><surname>Ashbery</surname><dob>7-28-1927</dob><city>Rochester</city><state>NY</state></entry>
+<entry><surname>Bremser</surname><dob>5-22-1934</dob><city>Jersey City</city><state>NJ</state></entry>
+<entry><surname>Corso</surname><dob>3-26-1930</dob><city>Cicero</city><state>IL</state></entry>
+<entry><surname>Dylan</surname><dob>5-24-1941</dob><city>Duluth</city><state>MN</state></entry>
+<entry><surname>Eigner</surname><dob>7-7-1927</dob><city>Swampscott</city><state>MA</state></entry>
+<entry><surname>Field</surname><dob>6-7-1924</dob><city>Brooklyn</city><state>NY</state></entry>
+<entry><surname>Ginsberg</surname><dob>6-3-1926</dob><city>Newark</city><state>NJ</state></entry>
+<entry><surname>Hadley</surname><dob>5-27-1938</dob><city>St. Louis</city><state>MO</state></entry>
+<entry><surname>Jones</surname><dob>10-27-1934</dob><city>Newark</city><state>NJ</state></entry>
+<entry><surname>Kerouac</surname><dob>3-12-1922</dob><city>Lowell</city><state>MA</state></entry>
+<entry><surname>Lamantia</surname><dob>10-23-1927</dob><city>San Francisco</city><state>CA</state></entry>
+<entry><surname>McClure</surname><dob>10-20-1932</dob><city>Marysville</city><state>KS</state></entry>
+</silent>
+</generation>
